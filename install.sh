@@ -123,13 +123,13 @@ uninstall() {
     fi
 
     # Remove sourcing from shell profile
-    sed -i '' '/source \/opt\/bash-lib\/core\/init.sh/d' "$SHELL_PROFILE"
-    sed -i '' '/export BASH__PATH=\/opt\/bash-lib/d' "$SHELL_PROFILE"
+    sed -i '/source \/opt\/bash-lib\/core\/init.sh/d' "$SHELL_PROFILE" 2>/dev/null || true
+    sed -i '/export BASH__PATH=\/opt\/bash-lib/d' "$SHELL_PROFILE" 2>/dev/null || true
     
     # Remove from .bash_profile/.profile if it exists
     if [ -n "$BASH_PROFILE" ]; then
-        sed -i '' '/source \/opt\/bash-lib\/core\/init.sh/d' "$BASH_PROFILE"
-        sed -i '' '/export BASH__PATH=\/opt\/bash-lib/d' "$BASH_PROFILE"
+        sed -i '/source \/opt\/bash-lib\/core\/init.sh/d' "$BASH_PROFILE" 2>/dev/null || true
+        sed -i '/export BASH__PATH=\/opt\/bash-lib/d' "$BASH_PROFILE" 2>/dev/null || true
     fi
 
     echo "bash-lib uninstalled successfully. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
