@@ -31,12 +31,12 @@ include_file() {
     fi
 }
 
-# Add core/init.sh content
-include_file "core/init.sh"
-
-# Find and add all files ending with "*mod.sh" and "*.inc"
+# Find and add all files ending with "*mod.sh" and "*.inc" FIRST
 find . -type f \( -name "*mod.sh" -o -name "*.inc" \) | while read -r module; do
     include_file "$module"
 done
+
+# Add core/init.sh content LAST (after all modules are loaded)
+include_file "core/init.sh"
 
 echo "Build completed: $OUTPUT_FILE"
