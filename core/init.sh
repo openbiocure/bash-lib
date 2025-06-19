@@ -38,7 +38,7 @@ if [[ -n "${BASH__PATH}" ]] && [[ -d "${BASH__PATH}" ]]; then
     import trapper 2>/dev/null && trapper.addTrap 'exit 1;' 10 
     import console 2>/dev/null
     
-    [[ -z ${BASH__VERBOSE} ]] &&  export BASH__VERBOSE=trace || export BASH__VERBOSE=${BASH__VERBOSE};
+    [[ -z ${BASH__VERBOSE} ]] &&  export BASH__VERBOSE=info || export BASH__VERBOSE=${BASH__VERBOSE};
     
     # Only use console.debug if console module was successfully imported
     if command -v console.debug >/dev/null 2>&1; then

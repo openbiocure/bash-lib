@@ -33,7 +33,11 @@ __console__get_script_name() {
             echo "${(%):-%N}"
             ;;
         "bash")
-            echo "$(basename "$0")"
+            if [[ -n "$0" ]]; then
+                basename "$0" 2>/dev/null || echo "bash"
+            else
+                echo "bash"
+            fi
             ;;
         *)
             echo "unknown"
@@ -47,7 +51,11 @@ __console__get_source_file() {
     
     case $shell_name in
         "bash")
-            caller 0 | awk '{print $2}' | xargs basename
+            if command -v caller >/dev/null 2>&1; then
+                caller 0 2>/dev/null | awk '{print $2}' | head -1 | xargs basename 2>/dev/null || echo "bash"
+            else
+                echo "bash"
+            fi
             ;;
         "zsh")
             echo "${(%):-%N}"
