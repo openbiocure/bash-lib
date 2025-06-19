@@ -15,25 +15,53 @@ install() {
     # Create the directory if it does not exist
     sudo mkdir -p /opt/bash-lib
 
-    # Download the merged script file
-    if sudo curl -sSL $BASH_LIB_URL -o $BASH_LIB_PATH; then
-        # Make the script executable
-        sudo chmod +x $BASH_LIB_PATH
+    # Check if we're installing locally (from current directory)
+    if [ -f "./dist/bash-lib.sh" ]; then
+        echo "Installing bash-lib from local files..."
+        
+        # Copy the local merged script file
+        if sudo cp ./dist/bash-lib.sh $BASH_LIB_PATH; then
+            # Make the script executable
+            sudo chmod +x $BASH_LIB_PATH
 
-        # Add to shell profile
-        if ! grep -q "source $BASH_LIB_PATH" "$SHELL_PROFILE"; then
-            echo "source $BASH_LIB_PATH" >> "$SHELL_PROFILE"
-            echo "export BASH__PATH=/opt/bash-lib" >> "$SHELL_PROFILE"
+            # Add to shell profile
+            if ! grep -q "source $BASH_LIB_PATH" "$SHELL_PROFILE"; then
+                echo "source $BASH_LIB_PATH" >> "$SHELL_PROFILE"
+                echo "export BASH__PATH=/opt/bash-lib" >> "$SHELL_PROFILE"
+            fi
+
+            # Source the script for the current session
+            source $BASH_LIB_PATH
+            export BASH__PATH=/opt/bash-lib
+
+            echo "bash-lib installed successfully from local files. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
+        else
+            echo "Failed to copy bash-lib.sh. Please check if the file exists in ./dist/"
+            exit 1
         fi
-
-        # Source the script for the current session
-        source $BASH_LIB_PATH
-        export BASH__PATH=/opt/bash-lib
-
-        echo "bash-lib installed successfully. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
     else
-        echo "Failed to download bash-lib.sh. Please check your internet connection and try again."
-        exit 1
+        echo "Installing bash-lib from remote repository..."
+        
+        # Download the merged script file
+        if sudo curl -sSL $BASH_LIB_URL -o $BASH_LIB_PATH; then
+            # Make the script executable
+            sudo chmod +x $BASH_LIB_PATH
+
+            # Add to shell profile
+            if ! grep -q "source $BASH_LIB_PATH" "$SHELL_PROFILE"; then
+                echo "source $BASH_LIB_PATH" >> "$SHELL_PROFILE"
+                echo "export BASH__PATH=/opt/bash-lib" >> "$SHELL_PROFILE"
+            fi
+
+            # Source the script for the current session
+            source $BASH_LIB_PATH
+            export BASH__PATH=/opt/bash-lib
+
+            echo "bash-lib installed successfully from remote repository. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
+        else
+            echo "Failed to download bash-lib.sh. Please check your internet connection and try again."
+            exit 1
+        fi
     fi
 }
 

@@ -15,12 +15,12 @@ build:
 # install bash-lib locally
 install: build
 	@echo "Installing bash-lib..."
-	@sudo ./install-local.sh
+	@sudo ./install.sh
 
 # uninstall bash-lib
 uninstall:
 	@echo "Uninstalling bash-lib..."
-	@sudo ./install-local.sh uninstall
+	@sudo ./install.sh uninstall
 
 # clean build artifacts
 clean:
