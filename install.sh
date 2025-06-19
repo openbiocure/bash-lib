@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-BASH_LIB_URL="https://raw.githubusercontent.com/mohammadchehab/bash-lib/main/dist/bash-lib.sh"
+BASH_LIB_URL="https://raw.githubusercontent.com/openbiocure/bash-lib/main/dist/bash-lib.sh"
 BASH_LIB_PATH="/opt/bash-lib/bash-lib.sh"
 SHELL_PROFILE=""
 
