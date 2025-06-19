@@ -6,11 +6,11 @@
 ## Allows you include libraries
 function import () {
 
-  local src=${BASH__PATH:-"/opt/ek/-bash"};
+  local src=${BASH__PATH:-"/opt/bash-lib"};
   local extension=$([[ -z ${2} ]]  && echo "mod.sh" || echo "inc");
 
   if [[ ! -d ${src} ]]; then
-      echo -e "\e[31mError: \e[0m Bash Path is not set \e[1mexport BASH__PATH=/opt/ek/-bash\e[0m"
+      echo -e "\e[31mError: \e[0m Bash Path is not set \e[1mexport BASH__PATH=/opt/bash-lib\e[0m"
       exit 1;
   fi
 

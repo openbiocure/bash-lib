@@ -18,7 +18,7 @@ A  Core library for bash Bourne
 To quickly set up the `bash-lib` library, run the following command:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/mohammadchehab/bash-lib/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh
 ```
 
 This script will:
@@ -30,14 +30,14 @@ This script will:
 ## Un Installation
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/mohammadchehab/bash-lib/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh uninstall
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh uninstall
 ```
 
 
 ## Development
 
 ```bash
-git clone https://github.com/mohammadchehab/bash-lib && \
+git clone https://github.com/openbiocure/bash-lib && \
 cd bash-lib && \ 
 export BASH__PATH=~/develop/bash-lib && \
 source ${BASH__PATH}/core/init.sh

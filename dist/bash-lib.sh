@@ -1,5 +1,5 @@
 #!/bin/bash
-# Generated on Wed Jun 19 15:55:31 +04 2024
+# Generated on Thu Jun 19 09:13:00 +04 2025
 # Author: Mohammad Chehab
 # This is a generated file. Do not modify.
 
@@ -13,11 +13,11 @@
 ## Allows you include libraries
 function import () {
 
-  local src=${BASH__PATH:-"/opt/ek/-bash"};
+  local src=${BASH__PATH:-"/opt/bash-lib"};
   local extension=$([[ -z ${2} ]]  && echo "mod.sh" || echo "inc");
 
   if [[ ! -d ${src} ]]; then
-      echo -e "\e[31mError: \e[0m Bash Path is not set \e[1mexport BASH__PATH=/opt/ek/-bash\e[0m"
+      echo -e "\e[31mError: \e[0m Bash Path is not set \e[1mexport BASH__PATH=/opt/bash-lib\e[0m"
       exit 1;
   fi
 
