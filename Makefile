@@ -29,16 +29,14 @@ all: install-deps
 test: install-deps
 	@export PATH="$$HOME/.local/bin:$$PATH" && shellspec --shell /bin/bash -e BASH__VERBOSE=info
 
-# build merged script
-build:
-	@echo "Building merged script file..."
-	@./build.sh
-
 # install bash-lib locally
-install: install-deps build
+install: install-deps
 	@echo "Installing bash-lib..."
-	@chmod +x install.sh
-	@sudo ./install.sh
+	@mkdir -p dist/bash-lib
+	@cp -r core modules config assets README.md CHANGELOG.md LICENSE* dist/bash-lib/ 2>/dev/null || true
+	@cp install.sh dist/bash-lib/
+	@chmod +x dist/bash-lib/install.sh
+	@cd dist/bash-lib && sudo ./install.sh
 
 # uninstall bash-lib
 uninstall:
@@ -49,18 +47,19 @@ uninstall:
 # clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -f dist/bash-lib.sh
+	@rm -rf dist/
+	@rm -f *.tar.gz
+
 
 # show help
 help:
 	@echo "Available targets:"
-	@echo "  check-deps  - Check if all dependencies are installed"
+	@echo "  check-deps   - Check if all dependencies are installed"
 	@echo "  install-deps - Install all missing dependencies"
-	@echo "  deps-status - Show detailed status of all dependencies"
-	@echo "  all         - Run unit tests"
-	@echo "  test        - Run unit tests (alias for all)"
-	@echo "  build       - Build the merged bash-lib.sh file"
-	@echo "  install     - Build and install bash-lib locally"
-	@echo "  uninstall   - Uninstall bash-lib"
-	@echo "  clean       - Remove build artifacts"
-	@echo "  help        - Show this help message"
+	@echo "  deps-status  - Show detailed status of all dependencies"
+	@echo "  all          - Run unit tests"
+	@echo "  test         - Run unit tests (alias for all)"
+	@echo "  install      - Build and install bash-lib locally"
+	@echo "  uninstall    - Uninstall bash-lib"
+	@echo "  clean        - Remove all build artifacts"
+	@echo "  help         - Show this help message"

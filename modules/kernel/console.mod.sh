@@ -1,190 +1,224 @@
 #!/bin/bash
+
+# Console Module for bash-lib
+# Provides structured logging functionality with color support and verbosity control
+
 exec 3>&1
 
 IMPORTED="."
 
 import "colors" "inc"
 
+# Configuration
 __CONSOLE__TIME__FORMAT="+%d/%m/%Y %H:%M:%S"
-__CONSOLE__TEMPLATE="#{color}#{log_date} - #{host_name} - #{script} - [#{log_type}]:#{color_off}"
+__CONSOLE__DEFAULT_VERBOSITY="trace"
 
-# Determine the shell type and current script file
-if [[ -n "$ZSH_VERSION" ]]; then
-  SHELL_NAME="zsh"
-  CURRENT_SCRIPT=${(%):-%N}
-elif [[ -n "$BASH_VERSION" ]]; then
-  SHELL_NAME="bash"
-  CURRENT_SCRIPT=$(basename "$0")
-else
-  SHELL_NAME="unknown"
-  CURRENT_SCRIPT="unknown"
-fi
-
-function console.help() {
-   cat <<EOF
--console.log
-(Description):
-   Throws a [log] identifier into the terminal
-(Usage):
-    console.log Hello World!
-  
--console.info
-(Description):
-   Throws a [info] identifier into the terminal
-(Usage):
-    console.info Hello World!
-
--console.fatal
-(Description):
-   Throws a [fatal] identifier into the terminal
-(Usage):
-    console.fatal Woops an error just popped out!
-EOF
+# Shell detection
+__console__detect_shell() {
+    if [[ -n "$ZSH_VERSION" ]]; then
+        echo "zsh"
+    elif [[ -n "$BASH_VERSION" ]]; then
+        echo "bash"
+    else
+        echo "unknown"
+    fi
 }
 
-console.__processLog() {
-   local verbose=$(echo ${BASH__VERBOSE:-trace} | tr '[:upper:]' '[:lower:]')
-   local requested_log_type=$(echo ${1} | tr '[:upper:]' '[:lower:]')
-   local log=false
-
-   case ${requested_log_type} in
-   trace | debug | error | info)
-      [[ ${verbose} == ${requested_log_type} ]] && log=true || log=false
-      if [[ ${verbose} == "trace" ]]; then
-         log=true
-      fi
-      ;;
-   log | fatal | warn | error)
-      log=true
-      ;;
-   esac
-
-   if [[ ${log} == false ]]; then
-      return
-   fi
-
-   local message="$5"
-   local source_file=$3
-   local line_no=$4
-   local log_date=$(date "${__CONSOLE__TIME__FORMAT}")
-   local host_name=$(hostname)
-   local script=$CURRENT_SCRIPT
-   local log_type=$1
-   local color=$2
-   local color_off=${Color_Off}
-   local template="${color}${log_date} - ${host_name} - ${script} - [${log_type}]:${color_off}"
-
-   echo -e "${template} ${message}" 1>&3
+# Get current script name
+__console__get_script_name() {
+    local shell_name=$(__console__detect_shell)
+    
+    case $shell_name in
+        "zsh")
+            echo "${(%):-%N}"
+            ;;
+        "bash")
+            echo "$(basename "$0")"
+            ;;
+        *)
+            echo "unknown"
+            ;;
+    esac
 }
 
+# Get source file name for logging
+__console__get_source_file() {
+    local shell_name=$(__console__detect_shell)
+    
+    case $shell_name in
+        "bash")
+            caller 0 | awk '{print $2}' | xargs basename
+            ;;
+        "zsh")
+            echo "${(%):-%N}"
+            ;;
+        *)
+            echo "unknown"
+            ;;
+    esac
+}
+
+# Check if log should be displayed based on verbosity
+__console__should_log() {
+    local requested_log_type="$1"
+    local verbose="${BASH__VERBOSE:-$__CONSOLE__DEFAULT_VERBOSITY}"
+    
+    # Convert to lowercase for comparison
+    verbose=$(echo "$verbose" | tr '[:upper:]' '[:lower:]')
+    requested_log_type=$(echo "$requested_log_type" | tr '[:upper:]' '[:lower:]')
+    
+    # Always log these types
+    case $requested_log_type in
+        log|fatal|warn|error)
+            return 0
+            ;;
+    esac
+    
+    # Check verbosity for these types
+    case $requested_log_type in
+        trace|debug|info)
+            if [[ "$verbose" == "trace" ]] || [[ "$verbose" == "$requested_log_type" ]]; then
+                return 0
+            fi
+            ;;
+    esac
+    
+    return 1
+}
+
+# Core logging function
+__console__log() {
+    local log_type="$1"
+    local color="$2"
+    local message="$3"
+    local line_no="$4"
+    
+    # Check if we should log this message
+    if ! __console__should_log "$log_type"; then
+        return 0
+    fi
+    
+    # Get logging metadata
+    local log_date=$(date "$__CONSOLE__TIME__FORMAT")
+    local host_name=$(hostname)
+    local script=$(__console__get_script_name)
+    local source_file=$(__console__get_source_file)
+    local color_off="${Color_Off}"
+    
+    # Build log template
+    local template="${color}${log_date} - ${host_name} - ${script} - [${log_type}]:${color_off}"
+    
+    # Output the log message
+    echo -e "${template} ${message}" 1>&3
+}
+
+# Public logging functions
 console.log() {
-   local message="$@"
-   local line_no=$LINENO
-   local source_file
-
-   if [[ "$SHELL_NAME" == "bash" ]]; then
-      source_file=$(caller 0 | awk '{print $2}' | xargs basename)
-   elif [[ "$SHELL_NAME" == "zsh" ]]; then
-      source_file=${(%):-%N}
-   else
-      source_file="unknown"
-   fi
-
-   console.__processLog "LOG" "${Color_Off}" "${source_file}" "${line_no}" "${message}"
-}
-
-console.fatal() {
-   local message="$@"
-   local line_no=$LINENO
-   local source_file
-
-   if [[ "$SHELL_NAME" == "bash" ]]; then
-      source_file=$(caller 0 | awk '{print $2}' | xargs basename)
-   elif [[ "$SHELL_NAME" == "zsh" ]]; then
-      source_file=${(%):-%N}
-   else
-      source_file="unknown"
-   fi
-
-   console.__processLog "FATAL" "${BRed}" "${source_file}" "${line_no}" "${message}"
-}
-
-console.error() {
-   local message="$@"
-   local line_no=$LINENO
-   local source_file
-
-   if [[ "$SHELL_NAME" == "bash" ]]; then
-      source_file=$(caller 0 | awk '{print $2}' | xargs basename)
-   elif [[ "$SHELL_NAME" == "zsh" ]]; then
-      source_file=${(%):-%N}
-   else
-      source_file="unknown"
-   fi
-
-   console.__processLog "ERROR" "${BRed}" "${source_file}" "${line_no}" "${message}"
-}
-
-console.trace() {
-   local message="$@"
-   local line_no=$LINENO
-   local source_file
-
-   if [[ "$SHELL_NAME" == "bash" ]]; then
-      source_file=$(caller 0 | awk '{print $2}' | xargs basename)
-   elif [[ "$SHELL_NAME" == "zsh" ]]; then
-      source_file=${(%):-%N}
-   else
-      source_file="unknown"
-   fi
-
-   console.__processLog "TRACE" "${BYellow}" "${source_file}" "${line_no}" "${message}"
-}
-
-console.warn() {
-   local message="$@"
-   local line_no=$LINENO
-   local source_file
-
-   if [[ "$SHELL_NAME" == "bash" ]]; then
-      source_file=$(caller 0 | awk '{print $2}' | xargs basename)
-   elif [[ "$SHELL_NAME" == "zsh" ]]; then
-      source_file=${(%):-%N}
-   else
-      source_file="unknown"
-   fi
-
-   console.__processLog "WARN" "${BYellow}" "${source_file}" "${line_no}" "${message}"
-}
-
-console.debug() {
-   local message="$@"
-   local line_no=$LINENO
-   local source_file
-
-   if [[ "$SHELL_NAME" == "bash" ]]; then
-      source_file=$(caller 0 | awk '{print $2}' | xargs basename)
-   elif [[ "$SHELL_NAME" == "zsh" ]]; then
-      source_file=${(%):-%N}
-   else
-      source_file="unknown"
-   fi
-
-   console.__processLog "DEBUG" "${BCyan}" "${source_file}" "${line_no}" "${message}"
+    local message="$*"
+    local line_no=$LINENO
+    
+    __console__log "LOG" "${Color_Off}" "$message" "$line_no"
 }
 
 console.info() {
-   local message="$@"
-   local line_no=$LINENO
-   local source_file
+    local message="$*"
+    local line_no=$LINENO
+    
+    __console__log "INFO" "${Color_Off}" "$message" "$line_no"
+}
 
-   if [[ "$SHELL_NAME" == "bash" ]]; then
-      source_file=$(caller 0 | awk '{print $2}' | xargs basename)
-   elif [[ "$SHELL_NAME" == "zsh" ]]; then
-      source_file=${(%):-%N}
-   else
-      source_file="unknown"
-   fi
+console.debug() {
+    local message="$*"
+    local line_no=$LINENO
+    
+    __console__log "DEBUG" "${BCyan}" "$message" "$line_no"
+}
 
-   console.__processLog "INFO" "${Color_Off}" "${source_file}" "${line_no}" "${message}"
+console.trace() {
+    local message="$*"
+    local line_no=$LINENO
+    
+    __console__log "TRACE" "${BYellow}" "$message" "$line_no"
+}
+
+console.warn() {
+    local message="$*"
+    local line_no=$LINENO
+    
+    __console__log "WARN" "${BYellow}" "$message" "$line_no"
+}
+
+console.error() {
+    local message="$*"
+    local line_no=$LINENO
+    
+    __console__log "ERROR" "${BRed}" "$message" "$line_no"
+}
+
+console.fatal() {
+    local message="$*"
+    local line_no=$LINENO
+    
+    __console__log "FATAL" "${BRed}" "$message" "$line_no"
+}
+
+# Utility functions
+console.set_verbosity() {
+    if [[ -n "$1" ]]; then
+        export BASH__VERBOSE="$1"
+        console.debug "Verbosity set to: $1"
+    else
+        console.error "No verbosity level specified"
+        return 1
+    fi
+}
+
+console.get_verbosity() {
+    echo "${BASH__VERBOSE:-$__CONSOLE__DEFAULT_VERBOSITY}"
+}
+
+console.set_time_format() {
+    if [[ -n "$1" ]]; then
+        __CONSOLE__TIME__FORMAT="$1"
+        console.debug "Time format set to: $1"
+    else
+        console.error "No time format specified"
+        return 1
+    fi
+}
+
+# Help function
+console.help() {
+    cat <<EOF
+Console Module - Structured Logging for bash-lib
+
+Available Functions:
+  console.log <message>     - Log a message with [LOG] identifier
+  console.info <message>    - Log an info message with [INFO] identifier
+  console.debug <message>   - Log a debug message with [DEBUG] identifier
+  console.trace <message>   - Log a trace message with [TRACE] identifier
+  console.warn <message>    - Log a warning message with [WARN] identifier
+  console.error <message>   - Log an error message with [ERROR] identifier
+  console.fatal <message>   - Log a fatal message with [FATAL] identifier
+
+Utility Functions:
+  console.set_verbosity <level>  - Set logging verbosity (trace|debug|info|warn|error|fatal)
+  console.get_verbosity          - Get current verbosity level
+  console.set_time_format <fmt>  - Set custom time format (date format string)
+  console.help                   - Show this help message
+
+Verbosity Levels:
+  trace  - Show all log messages (default)
+  debug  - Show debug and above
+  info   - Show info and above
+  warn   - Show warnings and above
+  error  - Show errors and above
+  fatal  - Show only fatal messages
+
+Examples:
+  console.log "Application started"
+  console.set_verbosity debug
+  console.debug "Processing user input"
+  console.error "Failed to connect to database"
+EOF
 }

@@ -23,3 +23,6 @@ function trapper.filterTraps() {
     shift
     echo $(trap | grep "$cmd" | sed -e "s/$'\n'/ ; /g")
 }
+
+# Mark module as imported
+IMPORTED=true

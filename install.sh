@@ -5,84 +5,101 @@ BASH_LIB_ZIP_URL="https://github.com/openbiocure/bash-lib/archive/refs/heads/mai
 BASH_LIB_PATH="/opt/bash-lib"
 SHELL_PROFILE=""
 
-if [ -n "$BASH_VERSION" ]; then
-    SHELL_PROFILE="$HOME/.bashrc"
-elif [ -n "$ZSH_VERSION" ]; then
-    SHELL_PROFILE="$HOME/.zshrc"
-fi
+# Initialize shell profile based on current shell
+init_shell_profile() {
+    if [ -n "$BASH_VERSION" ]; then
+        SHELL_PROFILE="$HOME/.bashrc"
+    elif [ -n "$ZSH_VERSION" ]; then
+        SHELL_PROFILE="$HOME/.zshrc"
+    fi
+}
 
+# Make all scripts executable
+make_scripts_executable() {
+    sudo chmod +x $BASH_LIB_PATH/*.sh
+    sudo chmod +x $BASH_LIB_PATH/core/*.sh
+    sudo chmod +x $BASH_LIB_PATH/modules/*/*.sh
+}
+
+# Add bash-lib to shell profile
+add_to_shell_profile() {
+    if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$SHELL_PROFILE"; then
+        echo "source $BASH_LIB_PATH/core/init.sh" >> "$SHELL_PROFILE"
+        echo "export BASH__PATH=$BASH_LIB_PATH" >> "$SHELL_PROFILE"
+    fi
+}
+
+# Source bash-lib for current session
+source_bash_lib() {
+    source $BASH_LIB_PATH/core/init.sh
+    export BASH__PATH=$BASH_LIB_PATH
+}
+
+# Install from local files
+install_from_local() {
+    echo "Installing bash-lib from local files..."
+    
+    if sudo cp -r . $BASH_LIB_PATH/; then
+        make_scripts_executable
+        add_to_shell_profile
+        source_bash_lib
+        
+        echo "bash-lib installed successfully from local files. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
+    else
+        echo "Failed to copy bash-lib files. Please check if the files exist."
+        return 1
+    fi
+}
+
+# Install from remote repository
+install_from_remote() {
+    echo "Installing bash-lib from remote repository..."
+    
+    # Create temporary directory for download
+    TEMP_DIR=$(mktemp -d)
+    cd $TEMP_DIR
+    
+    # Download and extract the zip file
+    if curl -sSL -o bash-lib.zip $BASH_LIB_ZIP_URL && unzip -q bash-lib.zip; then
+        # Move the extracted content to the target directory
+        if sudo cp -r bash-lib-main/* $BASH_LIB_PATH/; then
+            make_scripts_executable
+            add_to_shell_profile
+            source_bash_lib
+            
+            echo "bash-lib installed successfully from remote repository. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
+        else
+            echo "Failed to copy extracted files to $BASH_LIB_PATH"
+            cd - > /dev/null
+            rm -rf $TEMP_DIR
+            return 1
+        fi
+    else
+        echo "Failed to download or extract bash-lib. Please check your internet connection and try again."
+        cd - > /dev/null
+        rm -rf $TEMP_DIR
+        return 1
+    fi
+    
+    # Clean up temporary directory
+    cd - > /dev/null
+    rm -rf $TEMP_DIR
+}
+
+# Main installation function
 install() {
     # Create the directory if it does not exist
     sudo mkdir -p $BASH_LIB_PATH
 
     # Check if we're installing locally (from current directory)
     if [ -d "./core" ] && [ -d "./modules" ]; then
-        echo "Installing bash-lib from local files..."
-        
-        # Copy the entire repository structure
-        if sudo cp -r . $BASH_LIB_PATH/; then
-            # Make scripts executable
-            sudo chmod +x $BASH_LIB_PATH/*.sh
-            sudo chmod +x $BASH_LIB_PATH/core/*.sh
-            sudo chmod +x $BASH_LIB_PATH/modules/*/*.sh
-
-            # Add to shell profile
-            if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$SHELL_PROFILE"; then
-                echo "source $BASH_LIB_PATH/core/init.sh" >> "$SHELL_PROFILE"
-                echo "export BASH__PATH=$BASH_LIB_PATH" >> "$SHELL_PROFILE"
-            fi
-
-            # Source the script for the current session
-            source $BASH_LIB_PATH/core/init.sh
-            export BASH__PATH=$BASH_LIB_PATH
-
-            echo "bash-lib installed successfully from local files. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
-        else
-            echo "Failed to copy bash-lib files. Please check if the files exist."
-            exit 1
-        fi
+        install_from_local
     else
-        echo "Installing bash-lib from remote repository..."
-        
-        # Create temporary directory for download
-        TEMP_DIR=$(mktemp -d)
-        cd $TEMP_DIR
-        
-        # Download and extract the zip file
-        if curl -sSL -o bash-lib.zip $BASH_LIB_ZIP_URL && unzip -q bash-lib.zip; then
-            # Move the extracted content to the target directory
-            if sudo cp -r bash-lib-main/* $BASH_LIB_PATH/; then
-                # Make scripts executable
-                sudo chmod +x $BASH_LIB_PATH/*.sh
-                sudo chmod +x $BASH_LIB_PATH/core/*.sh
-                sudo chmod +x $BASH_LIB_PATH/modules/*/*.sh
-
-                # Add to shell profile
-                if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$SHELL_PROFILE"; then
-                    echo "source $BASH_LIB_PATH/core/init.sh" >> "$SHELL_PROFILE"
-                    echo "export BASH__PATH=$BASH_LIB_PATH" >> "$SHELL_PROFILE"
-                fi
-
-                # Source the script for the current session
-                source $BASH_LIB_PATH/core/init.sh
-                export BASH__PATH=$BASH_LIB_PATH
-
-                echo "bash-lib installed successfully from remote repository. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
-            else
-                echo "Failed to copy extracted files to $BASH_LIB_PATH"
-                exit 1
-            fi
-        else
-            echo "Failed to download or extract bash-lib. Please check your internet connection and try again."
-            exit 1
-        fi
-        
-        # Clean up temporary directory
-        cd - > /dev/null
-        rm -rf $TEMP_DIR
+        install_from_remote
     fi
 }
 
+# Uninstall bash-lib
 uninstall() {
     # Remove the entire directory
     if [ -d "$BASH_LIB_PATH" ]; then
@@ -96,9 +113,43 @@ uninstall() {
     echo "bash-lib uninstalled successfully. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
 }
 
-# Check for uninstall flag
-if [ "$1" == "uninstall" ]; then
-    uninstall
-else
-    install
-fi
+# Show help
+show_help() {
+    echo "Usage: $0 [COMMAND]"
+    echo ""
+    echo "Commands:"
+    echo "  install    - Install bash-lib (default)"
+    echo "  uninstall  - Uninstall bash-lib"
+    echo "  help       - Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0              # Install bash-lib"
+    echo "  $0 install      # Install bash-lib"
+    echo "  $0 uninstall    # Uninstall bash-lib"
+    echo "  $0 help         # Show help"
+}
+
+# Main function with switch statement
+main() {
+    init_shell_profile
+    
+    case "${1:-install}" in
+        "install")
+            install
+            ;;
+        "uninstall")
+            uninstall
+            ;;
+        "help"|"-h"|"--help")
+            show_help
+            ;;
+        *)
+            echo "Unknown command: $1"
+            echo "Use '$0 help' for usage information."
+            exit 1
+            ;;
+    esac
+}
+
+# Execute main function with all arguments
+main "$@"

@@ -121,7 +121,9 @@ install_dependencies() {
     fi
     
     # Install shellspec if missing
-    if ! command_exists shellspec; then
+    if command_exists shellspec || [ -d "$HOME/.local/lib/shellspec" ]; then
+        print_status "info" "shellspec already installed. Skipping installation."
+    else
         print_status "info" "Installing shellspec..."
         curl -fsSL https://git.io/shellspec | sh -s -- --yes
         print_status "success" "shellspec installed successfully."

@@ -1,7 +1,7 @@
 Describe 'console'
 Include ./core/init.sh
 It "Run console log"
-    When call console.log hello
-    The output should equal ""
- End
+    When run console.log hello 2>/dev/null
+    The output should include "[LOG]: hello"
+End
 End

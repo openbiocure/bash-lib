@@ -9,17 +9,10 @@ function import () {
   local src=${BASH__PATH:-"/opt/bash-lib"};
   local extension=$([[ -z ${2} ]]  && echo "mod.sh" || echo "inc");
 
-  # Check if we're running from the merged bash-lib.sh file
-  if [[ -f "${src}/bash-lib.sh" ]] && [[ "${BASH_SOURCE[0]}" == "${src}/bash-lib.sh" ]]; then
-    # We're running from the merged file, so modules are already loaded
-    # Just set IMPORTED to indicate success
-    IMPORTED="."
-    return 0
-  fi
-
   if [[ ! -d ${src} ]]; then
-      echo -e "\e[31mError: \e[0m Bash Path is not set \e[1mexport BASH__PATH=/opt/bash-lib\e[0m"
-      exit 1;
+      echo -e "\e[31mWarning: \e[0m Bash Path is not set or directory doesn't exist: \e[1m${src}\e[0m"
+      echo -e "Set it with: \e[1mexport BASH__PATH=/opt/bash-lib\e[0m"
+      return 1;
   fi
 
   local module=$(find ${src} -name "${1}.${extension}" 2>/dev/null)
@@ -27,30 +20,33 @@ function import () {
     source ${module}
     if [[ -z ${IMPORTED} ]]; then
       echo -e "\e[31mError:\e[0m Failed to load \e[1m${1}.${extension}\e[0m at ${src}";
-      exit 2;
+      return 2;
     fi
   else
     echo -e "\e[31mError: \e[0mCannot find \e[1m${1}\e[0m library inside: ${src}";
-    exit 3;
+    return 3;
   fi
 }
 
-# start importing pre-requisits
-# Only import if we're not running from the merged file
-if [[ "${BASH_SOURCE[0]}" != "${BASH__PATH:-/opt/bash-lib}/bash-lib.sh" ]]; then
-  import logo
-  import build "inc";
-  import engine;
-  import math
-  import console;
-  import trapper;
+# Import required modules for initialization (only if BASH__PATH is set)
+if [[ -n "${BASH__PATH}" ]] && [[ -d "${BASH__PATH}" ]]; then
+    # Source build configuration for version info
+    if [[ -f "${BASH__PATH}/config/build.inc" ]]; then
+        source "${BASH__PATH}/config/build.inc"
+    fi
+    
+    import trapper 2>/dev/null && trapper.addTrap 'exit 1;' 10 
+    import console 2>/dev/null
+    
+    [[ -z ${BASH__VERBOSE} ]] &&  export BASH__VERBOSE=trace || export BASH__VERBOSE=${BASH__VERBOSE};
+    
+    # Only use console.debug if console module was successfully imported
+    if command -v console.debug >/dev/null 2>&1; then
+        console.debug "Verbosity:  ${BASH__VERBOSE} ";
+        console.debug "Version : ${BASH__RELEASE} ";
+    fi
+else
+    echo -e "\e[33mInfo: \e[0mBash-lib not fully initialized. Set \e[1mBASH__PATH\e[0m to enable all features."
 fi
-
-## add a trapper for the exceptions
-trapper.addTrap 'exit 1;' 10 
-
-[[ -z ${BASH__VERBOSE} ]] &&  export BASH__VERBOSE=trace || export BASH__VERBOSE=${BASH__VERBOSE};
-console.debug "Verbosity:  ${BASH__VERBOSE} ";
-console.debug "Version : ${BASH__RELEASE} ";
 
 
