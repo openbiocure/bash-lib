@@ -7,6 +7,10 @@ SHELL:=/bin/bash
 all:
 	@shellspec --shell /bin/bash -e BASH__VERBOSE=info
 
+# run unit tests (alias for all)
+test:
+	@shellspec --shell /bin/bash -e BASH__VERBOSE=info
+
 # build merged script
 build:
 	@echo "Building merged script file..."
@@ -33,6 +37,7 @@ clean:
 help:
 	@echo "Available targets:"
 	@echo "  all       - Run unit tests"
+	@echo "  test      - Run unit tests (alias for all)"
 	@echo "  build     - Build the merged bash-lib.sh file"
 	@echo "  install   - Build and install bash-lib locally"
 	@echo "  uninstall - Uninstall bash-lib"
