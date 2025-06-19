@@ -1,5 +1,5 @@
 #!/bin/bash
-# Generated on Thu Jun 19 09:24:23 +04 2025
+# Generated on Thu Jun 19 09:27:01 +04 2025
 # Author: Mohammad Chehab
 # This is a generated file. Do not modify.
 
@@ -15,6 +15,14 @@ function import () {
 
   local src=${BASH__PATH:-"/opt/bash-lib"};
   local extension=$([[ -z ${2} ]]  && echo "mod.sh" || echo "inc");
+
+  # Check if we're running from the merged bash-lib.sh file
+  if [[ -f "${src}/bash-lib.sh" ]] && [[ "${BASH_SOURCE[0]}" == "${src}/bash-lib.sh" ]]; then
+    # We're running from the merged file, so modules are already loaded
+    # Just set IMPORTED to indicate success
+    IMPORTED="."
+    return 0
+  fi
 
   if [[ ! -d ${src} ]]; then
       echo -e "\e[31mError: \e[0m Bash Path is not set \e[1mexport BASH__PATH=/opt/bash-lib\e[0m"
@@ -35,12 +43,15 @@ function import () {
 }
 
 # start importing pre-requisits
-import logo
-import build "inc";
-import engine;
-import math
-import console;
-import trapper;
+# Only import if we're not running from the merged file
+if [[ "${BASH_SOURCE[0]}" != "${BASH__PATH:-/opt/bash-lib}/bash-lib.sh" ]]; then
+  import logo
+  import build "inc";
+  import engine;
+  import math
+  import console;
+  import trapper;
+fi
 
 ## add a trapper for the exceptions
 trapper.addTrap 'exit 1;' 10 
