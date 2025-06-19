@@ -3,13 +3,30 @@ SHELL:=/bin/bash
 # Default target
 .DEFAULT_GOAL := help
 
+# Check and install shellspec if needed
+ensure-shellspec:
+	@if ! command -v shellspec >/dev/null 2>&1; then \
+		echo "shellspec not found. Installing shellspec..."; \
+		if command -v curl >/dev/null 2>&1; then \
+			curl -fsSL https://git.io/shellspec | sh -s -- --yes; \
+			echo "shellspec installed successfully."; \
+			echo "Adding ~/.local/bin to PATH for this session..."; \
+			export PATH="$$HOME/.local/bin:$$PATH"; \
+		else \
+			echo "Error: curl is required to install shellspec. Please install curl first."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "shellspec is already installed."; \
+	fi
+
 # run unit tests
-all:
-	@shellspec --shell /bin/bash -e BASH__VERBOSE=info
+all: ensure-shellspec
+	@export PATH="$$HOME/.local/bin:$$PATH" && shellspec --shell /bin/bash -e BASH__VERBOSE=info
 
 # run unit tests (alias for all)
-test:
-	@shellspec --shell /bin/bash -e BASH__VERBOSE=info
+test: ensure-shellspec
+	@export PATH="$$HOME/.local/bin:$$PATH" && shellspec --shell /bin/bash -e BASH__VERBOSE=info
 
 # build merged script
 build:
