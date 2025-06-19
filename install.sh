@@ -4,11 +4,18 @@
 BASH_LIB_ZIP_URL="https://github.com/openbiocure/bash-lib/archive/refs/heads/main.zip"
 BASH_LIB_PATH="/opt/bash-lib"
 SHELL_PROFILE=""
+BASH_PROFILE=""
 
 # Initialize shell profile based on current shell
 init_shell_profile() {
     if [ -n "$BASH_VERSION" ]; then
         SHELL_PROFILE="$HOME/.bashrc"
+        # Also check for .bash_profile for login shells
+        if [ -f "$HOME/.bash_profile" ]; then
+            BASH_PROFILE="$HOME/.bash_profile"
+        elif [ -f "$HOME/.profile" ]; then
+            BASH_PROFILE="$HOME/.profile"
+        fi
     elif [ -n "$ZSH_VERSION" ]; then
         SHELL_PROFILE="$HOME/.zshrc"
     fi
@@ -23,9 +30,18 @@ make_scripts_executable() {
 
 # Add bash-lib to shell profile
 add_to_shell_profile() {
+    # Add to .bashrc for interactive shells
     if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$SHELL_PROFILE"; then
         echo "source $BASH_LIB_PATH/core/init.sh" >> "$SHELL_PROFILE"
         echo "export BASH__PATH=$BASH_LIB_PATH" >> "$SHELL_PROFILE"
+    fi
+    
+    # Add to .bash_profile/.profile for login shells (SSH sessions)
+    if [ -n "$BASH_PROFILE" ]; then
+        if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$BASH_PROFILE"; then
+            echo "source $BASH_LIB_PATH/core/init.sh" >> "$BASH_PROFILE"
+            echo "export BASH__PATH=$BASH_LIB_PATH" >> "$BASH_PROFILE"
+        fi
     fi
 }
 
@@ -109,6 +125,12 @@ uninstall() {
     # Remove sourcing from shell profile
     sed -i '' '/source \/opt\/bash-lib\/core\/init.sh/d' "$SHELL_PROFILE"
     sed -i '' '/export BASH__PATH=\/opt\/bash-lib/d' "$SHELL_PROFILE"
+    
+    # Remove from .bash_profile/.profile if it exists
+    if [ -n "$BASH_PROFILE" ]; then
+        sed -i '' '/source \/opt\/bash-lib\/core\/init.sh/d' "$BASH_PROFILE"
+        sed -i '' '/export BASH__PATH=\/opt\/bash-lib/d' "$BASH_PROFILE"
+    fi
 
     echo "bash-lib uninstalled successfully. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
 }
