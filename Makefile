@@ -23,11 +23,11 @@ ensure-shellspec: install-deps
 
 # run unit tests
 all: install-deps
-	@export PATH="$$HOME/.local/bin:$$PATH" && shellspec --shell /bin/bash -e BASH__VERBOSE=info
+	@export PATH="$$HOME/.local/bin:$$PATH" && export BASH__PATH="$$(pwd)" && shellspec --shell /bin/bash -e BASH__VERBOSE=info
 
 # run unit tests (alias for all)
 test: install-deps
-	@export PATH="$$HOME/.local/bin:$$PATH" && shellspec --shell /bin/bash -e BASH__VERBOSE=info
+	@export PATH="$$HOME/.local/bin:$$PATH" && export BASH__PATH="$$(pwd)" && shellspec --shell /bin/bash -e BASH__VERBOSE=info
 
 # install bash-lib locally
 install: install-deps

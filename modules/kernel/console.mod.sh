@@ -108,8 +108,8 @@ __console__log() {
     # Build log template
     local template="${color}${log_date} - ${host_name} - ${script} - [${log_type}]:${color_off}"
     
-    # Output the log message
-    echo -e "${template} ${message}" 1>&3
+    # Output the log message to stdout for better test compatibility
+    echo -e "${template} ${message}"
 }
 
 # Public logging functions
