@@ -77,7 +77,7 @@ __console__should_log() {
     
     # Always log these types
     case $requested_log_type in
-        log|fatal|warn|error)
+        log|fatal|warn|error|success)
             return 0
             ;;
     esac
@@ -170,6 +170,13 @@ console.fatal() {
     __console__log "FATAL" "${BRed}" "$message" "$line_no"
 }
 
+console.success() {
+    local message="$*"
+    local line_no=$LINENO
+
+    __console__log "SUCCESS" "${BGreen}" "$message" "$line_no"
+}
+
 # Utility functions
 console.set_verbosity() {
     if [[ -n "$1" ]]; then
@@ -208,6 +215,7 @@ Available Functions:
   console.warn <message>    - Log a warning message with [WARN] identifier
   console.error <message>   - Log an error message with [ERROR] identifier
   console.fatal <message>   - Log a fatal message with [FATAL] identifier
+  console.success <message> - Log a success message with [SUCCESS] identifier
 
 Utility Functions:
   console.set_verbosity <level>  - Set logging verbosity (trace|debug|info|warn|error|fatal)
