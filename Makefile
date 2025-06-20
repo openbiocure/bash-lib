@@ -50,6 +50,9 @@ clean:
 	@rm -rf dist/
 	@rm -f *.tar.gz
 
+# generate Manual.md from all module help functions
+man:
+	@./manual.sh
 
 # show help
 help:
@@ -62,4 +65,5 @@ help:
 	@echo "  install      - Build and install bash-lib locally"
 	@echo "  uninstall    - Uninstall bash-lib"
 	@echo "  clean        - Remove all build artifacts"
+	@echo "  man          - Generate Manual.md from all module help functions"
 	@echo "  help         - Show this help message"
