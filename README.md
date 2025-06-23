@@ -1,172 +1,342 @@
 ![bash](./assets/bash.png)
 
-#  Bash Library
+# Bash Library (bash-lib)
 
->> Let's be honest; bash for developers is not that straightforward. And that's exactly why I made the bash library.
+> **A comprehensive, modular bash library for developers who want powerful, readable shell scripting**
 
->>How many of you wish you can use console.log inside a terminal instead of echo Hello world? If you are one, you should check this out.
+Bash-lib transforms shell scripting from a cryptic art into a developer-friendly experience. With structured logging, HTTP clients, file management, user management, and more - all wrapped in clean, readable APIs.
 
 [![asciicast](https://asciinema.org/a/xsWFcHG0hrFnKAvhrubClsq6n.svg)](https://asciinema.org/a/xsWFcHG0hrFnKAvhrubClsq6n)
 
-A Core library for bash Bourne with modular architecture
+## 🚀 Quick Start
 
-## Quick Setup
-
-To quickly set up the `bash-lib` library, run the following command:
+### One-Command Installation
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh
 ```
 
-This script will:
-- Download the complete bash-lib repository structure
-- Install it to `/opt/bash-lib`
-- Modify your shell profile to source the library automatically
-- Source the library in the current session
-
-## Un Installation
+### Development Setup
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh uninstall
-```
-
-## Development
-
-```bash
-git clone https://github.com/openbiocure/bash-lib && \
-cd bash-lib && \
+git clone https://github.com/openbiocure/bash-lib
+cd bash-lib
+make install-deps
 make install
 ```
 
-## Using the Library
+## 📦 Available Modules
 
-### Importing Modules
+### 🔧 **System Utilities**
+- **`console`** - Structured logging with colors and verbosity control
+- **`process`** - Process management and monitoring
 
-The library uses a modular approach. Import only the modules you need:
+### 🌐 **Network & HTTP**
+- **`http`** - Full-featured HTTP client with retries, timeouts, and status checking
 
-```bash
-import console  # Load the console module
-import http     # Load the HTTP module
-import math     # Load the math module
-```
+### 📁 **File & Directory Management**
+- **`directory`** - Comprehensive file/directory operations with search and filtering
+- **`permissions`** - User-friendly permission management with readable constants
+- **`compressions`** - Archive creation and extraction (tar, zip, gzip)
 
-### Using Modules
+### 👥 **User Management**
+- **`users`** - Complete user and group management system
 
-Once a module is loaded, you can use its functions:
+### 🧮 **Utilities**
+- **`math`** - Mathematical operations and calculations
+- **`string`** - String manipulation and validation
+- **`date`** - Date and time utilities
 
-```bash
-# Console logging
-console.log "Hello world!"
-# Output: 19/06/2025 09:13:51 - workernode04 - bash - [LOG]: Hello world!
+## 💡 Usage Examples
 
-# HTTP requests
-http.get "https://httpbin.org/get"
-
-# Math operations
-math.add 5 3  # Returns 8
-```
-
-### One-liner Examples
+### Basic Setup
 
 ```bash
-# Import and use in one line
-import http && http.get "https://api.example.com/data"
+# Source the library
+export BASH__PATH="/opt/bash-lib"
+source core/init.sh
 
-# Import multiple modules
-import console && import http && console.log "Making request..." && http.get "https://example.com"
+# Import modules
+import console
+import http
+import directory
+import permissions
 ```
 
-### Available Modules
-
-List all available modules:
+### Console Logging
 
 ```bash
-engine.modules
+console.log "Application started"
+console.info "Processing user input"
+console.debug "Variable value: $user_input"
+console.warn "Deprecated function called"
+console.error "Failed to connect to database"
+console.success "User created successfully"
 ```
 
-### Unloading Modules
-
-Remove a module from memory:
+### HTTP Requests
 
 ```bash
-unset console
+# Simple GET request
+http.get "https://api.example.com/data"
+
+# POST with data
+http.post "https://api.example.com/submit" --data='{"name":"John","age":30}'
+
+# Download file with retries
+http.download "https://example.com/file.zip" "/tmp/file.zip"
+
+# Check if service is up
+if http.is_200 "https://api.example.com/health"; then
+    console.success "Service is healthy"
+fi
 ```
 
-## Make Targets
-
-The project includes several make targets for development:
+### File & Directory Operations
 
 ```bash
-make          # Show help
-make build    # Build the merged script file
-make install  # Build and install locally
-make test     # Run unit tests
-make uninstall # Uninstall the library
-make clean    # Remove build artifacts
+# Create directory with parents
+directory.create "/path/to/new/dir" --parents
+
+# Search for files
+directory.search "/home/user" "*.log" --depth=3 --max=10
+
+# Get directory size
+size=$(directory.size "/var/log" --human-readable)
+
+# List with options
+directory.list "/tmp" --all --long --sort=date
 ```
 
-## Configuration
-
-| Variable | Description |
-|:--- | :--- |
-| `BASH__PATH`| The root location of the library (default: `/opt/bash-lib`) |
-| `BASH__VERBOSE`| Log verbosity level: `TRACE`, `DEBUG`, `INFO`, `WARN`, or `ERROR`. Default is `TRACE` |
-
-## Naming Conventions
-
-| Convention | Description |
-|:--- | :--- |
-| Class level variables in modules | `BASHLIB__MODULENAME__VARIABLE__NAME` |
-| Environment Scope | `VARIABLE__NAME` |
-
-## Debugging
-
-Enable bash debugging:
+### Permission Management
 
 ```bash
-set -x  # Turn on debugging
-# ... your code ...
-set +x  # Turn off debugging
+# Set permissions using readable constants
+permissions.set "file.txt" $PERM_SHARED_READ
+permissions.set "script.sh" $PERM_SHARED_EXEC
+
+# Make executable
+permissions.make_executable "script.sh"
+
+# Set ownership
+permissions.own "file.txt" "user:group"
+
+# Secure a file (private to owner)
+permissions.secure "secret.txt"
 ```
 
-Check bash-lib environment variables:
+### User Management
 
 ```bash
-env | sed "s/=.*//" | grep BASH
-# Example output:
-# BASH__PATH
-# BASH__VERBOSE
+# Create user with custom options
+users.create "john" --home="/home/john" --shell=$USER_SHELL_BASH
+
+# Create group and add user
+users.create_group "developers"
+users.add_to_group "john" "developers"
+
+# List users
+users.list --regular-only
+
+# Get user info
+users.info "john"
 ```
 
-## Unit Testing
-
-The library uses [shellspec](https://github.com/shellspec/shellspec) for unit testing. All test cases are stored in the `spec` directory.
+### String Operations
 
 ```bash
-make test     # Run all tests
-make all      # Alternative way to run tests
+# Check if string is empty
+if [[ $(string.isEmpty "$input") == "true" ]]; then
+    console.error "Input is required"
+fi
+
+# Convert case
+uppercase=$(string.upper "hello world")
+lowercase=$(string.lower "HELLO WORLD")
+
+# String manipulation
+trimmed=$(string.trim "  hello  ")
+length=$(string.length "hello")
+
+# Check patterns
+if [[ $(string.contains "hello world" "world") == "true" ]]; then
+    console.info "Found 'world' in string"
+fi
 ```
 
-## Architecture
-
-The library follows a modular architecture:
-
-```
-/opt/bash-lib/
-├── core/           # Core functionality (import, engine, etc.)
-├── modules/        # Feature modules (http, console, math, etc.)
-├── config/         # Configuration files
-└── spec/          # Unit tests
-```
-
-## Contribute
-
-Looking for ways to contribute?
+### Compression & Archives
 
 ```bash
+# Create tar archive
+compression.tar "backup.tar" "file1.txt" "dir1/"
+
+# Extract tar archive
+compression.untar "backup.tar" "/tmp/extracted"
+
+# Compress with gzip
+compression.gzip "large_file.txt"
+
+# Create zip archive
+compression.zip "archive.zip" "file1.txt" "file2.txt"
+```
+
+## 🛠️ Development
+
+### Available Make Targets
+
+```bash
+make help          # Show all available targets
+make install-deps  # Install development dependencies
+make test          # Run unit tests
+make man           # Generate Manual.md from module help
+make install       # Install bash-lib locally
+make uninstall     # Uninstall bash-lib
+make clean         # Remove build artifacts
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run specific module tests
+shellspec spec/directory_spec.sh --shell /bin/bash
+
+# Run with verbose output
+shellspec --shell /bin/bash -e BASH__VERBOSE=debug
+```
+
+### Generating Documentation
+
+```bash
+# Generate Manual.md from all module help functions
+make man
+
+# View the generated manual
+cat Manual.md
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|:--- | :--- | :--- |
+| `BASH__PATH` | Library root location | `/opt/bash-lib` |
+| `BASH__VERBOSE` | Log verbosity level | `info` |
+
+### Verbosity Levels
+
+- `trace` - Show all log messages
+- `debug` - Show debug and above
+- `info` - Show info and above
+- `warn` - Show warnings and above
+- `error` - Show errors and above
+
+### Setting Verbosity
+
+```bash
+# Set verbosity level
+console.set_verbosity debug
+
+# Check current level
+current_level=$(console.get_verbosity)
+```
+
+## 🏗️ Architecture
+
+```
+bash-lib/
+├── core/                    # Core functionality
+│   ├── init.sh             # Library initialization
+│   ├── engine.mod.sh       # Module engine
+│   └── trapper.mod.sh      # Signal handling
+├── modules/                 # Feature modules
+│   ├── system/             # System utilities
+│   │   ├── console.mod.sh  # Logging
+│   │   └── process.mod.sh  # Process management
+│   ├── http/               # HTTP client
+│   ├── directory/          # File operations
+│   ├── permissions/        # Permission management
+│   ├── users/              # User management
+│   ├── compressions/       # Archive operations
+│   ├── math/               # Mathematical operations
+│   ├── utils/              # Utility functions
+│   └── date/               # Date/time utilities
+├── config/                 # Configuration files
+├── spec/                   # Unit tests
+├── assets/                 # Static assets
+└── Manual.md              # Auto-generated documentation
+```
+
+## 🔍 Debugging
+
+### Enable Debug Mode
+
+```bash
+# Enable bash debugging
+set -x
+
+# Your code here
+import console
+console.debug "Debug message"
+
+set +x
+```
+
+### Check Environment
+
+```bash
+# List all bash-lib environment variables
+env | grep BASH__
+
+# Check module availability
+ls modules/*/
+```
+
+## 🤝 Contributing
+
+### Getting Started
+
+1. Fork the repository
+2. Create a feature branch
+3. Add your module or improvements
+4. Write tests for your changes
+5. Submit a pull request
+
+### Development Guidelines
+
+- Follow the existing module structure
+- Add comprehensive help functions
+- Include unit tests
+- Use descriptive function names
+- Add proper error handling
+- Document all functions with examples
+
+### Finding TODOs
+
+```bash
+# Find all TODO and FIXME comments
 egrep -Rin "TODO|FIXME" -R *
 ```
 
-## Change log
+## 📚 Documentation
 
-See the complete [changelog](CHANGELOG.md)
+- **Manual.md** - Auto-generated from module help functions
+- **CHANGELOG.md** - Complete change history
+- **Module Help** - Each module has built-in help: `module.help`
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+- **Issues**: [GitHub Issues](https://github.com/openbiocure/bash-lib/issues)
+- **Documentation**: Run `make man` to generate the latest manual
+- **Module Help**: Run `module.help` for any module's documentation
+
+---
+
+**Transform your bash scripts from cryptic commands into readable, maintainable code with bash-lib! 🚀**
