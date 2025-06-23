@@ -45,32 +45,62 @@ capitalize() {
 
 # Function to check if a module has a help function
 has_help_function() {
-    local module_file="$1"
-    grep -q "function.*\.help()" "$module_file" 2>/dev/null
+    local module_dir="$1"
+    # Check all .mod.sh files in the module directory
+    while IFS= read -r -d '' file; do
+        if grep -q "function.*\.help()" "$file" 2>/dev/null; then
+            return 0
+        fi
+    done < <(find "$module_dir" -name "*.mod.sh" -print0 2>/dev/null)
+    return 1
 }
 
 # Function to get help function name
 get_help_function() {
-    local module_file="$1"
-    local module_name=$(get_module_name "$module_file")
+    local module_dir="$1"
+    local module_name=$(basename "$module_dir")
+    
+    # Check all .mod.sh files in the module directory
+    while IFS= read -r -d '' file; do
+        if grep -q "function.*\.help()" "$file" 2>/dev/null; then
+            # Extract the help function name from the file
+            local help_func=$(grep -o "function [^.]*\.help()" "$file" | head -1 | sed 's/function //')
+            if [[ -n "$help_func" ]]; then
+                echo "$help_func"
+                return 0
+            fi
+        fi
+    done < <(find "$module_dir" -name "*.mod.sh" -print0 2>/dev/null)
+    
+    # Fallback to module name
     echo "${module_name}.help"
 }
 
 # Function to run help function and capture output
 run_help_function() {
-    local module_file="$1"
-    local help_func=$(get_help_function "$module_file")
+    local module_dir="$1"
+    local help_func=$(get_help_function "$module_dir")
     
-    # Import the module
-    local module_name=$(get_module_name "$module_file")
-    import "$module_name"
+    # Find the file containing the help function
+    local help_file=""
+    while IFS= read -r -d '' file; do
+        if grep -q "function.*\.help()" "$file" 2>/dev/null; then
+            help_file="$file"
+            break
+        fi
+    done < <(find "$module_dir" -name "*.mod.sh" -print0 2>/dev/null)
     
-    # Run help function and capture output
+    if [[ -z "$help_file" ]]; then
+        print_warning "No help file found for $module_dir"
+        return 1
+    fi
+    
+    # Source the file and run the help function
     local output
-    if output=$($help_func 2>&1); then
+    if output=$(bash -c "export BASH__PATH=\"$(pwd)\" && source core/init.sh && source \"$help_file\" && $help_func" 2>&1); then
         echo "$output"
     else
-        print_warning "Failed to run $help_func"
+        print_warning "Failed to run $help_func from $help_file"
         return 1
     fi
 }
@@ -92,10 +122,12 @@ EOF
     # Find all module directories
     local module_dirs=()
     while IFS= read -r -d '' dir; do
+        # Skip the top-level modules directory itself
+        [[ "$dir" == "modules" ]] && continue
         if [[ -d "$dir" ]]; then
             module_dirs+=("$dir")
         fi
-    done < <(find modules -type d -print0 2>/dev/null)
+    done < <(find modules -mindepth 1 -type d -print0 2>/dev/null)
 
     # Sort module directories alphabetically
     IFS=$'\n' module_dirs=($(sort <<<"${module_dirs[*]}"))
@@ -159,39 +191,21 @@ EOF
         echo "### $module_title" >> "$output_file"
         echo "" >> "$output_file"
         
-        # Find all .mod.sh files in this directory
-        local mod_files=()
-        while IFS= read -r -d '' file; do
-            if [[ -f "$file" && "$file" =~ \.mod\.sh$ ]]; then
-                mod_files+=("$file")
+        # Check if module has help function
+        if has_help_function "$module_dir"; then
+            print_status "  Found help function for $module_name"
+            
+            # Get help output
+            local help_output
+            if help_output=$(run_help_function "$module_dir" 2>/dev/null); then
+                # Format the help output
+                echo '```bash' >> "$output_file"
+                echo "$help_output" >> "$output_file"
+                echo '```' >> "$output_file"
+            else
+                print_warning "  Failed to get help for $module_name"
+                echo "Help function available but failed to execute." >> "$output_file"
             fi
-        done < <(find "$module_dir" -name "*.mod.sh" -print0 2>/dev/null)
-        
-        # Check if any module has a help function
-        local has_help=false
-        local help_output=""
-        
-        for mod_file in "${mod_files[@]}"; do
-            if has_help_function "$mod_file"; then
-                print_status "  Found help function in $(basename "$mod_file")"
-                has_help=true
-                
-                # Get help output
-                local output
-                if output=$(run_help_function "$mod_file" 2>/dev/null); then
-                    help_output="$output"
-                    break  # Use the first help function found
-                else
-                    print_warning "  Failed to get help from $(basename "$mod_file")"
-                fi
-            fi
-        done
-        
-        if [[ "$has_help" == "true" && -n "$help_output" ]]; then
-            # Format the help output
-            echo '```bash' >> "$output_file"
-            echo "$help_output" >> "$output_file"
-            echo '```' >> "$output_file"
         else
             print_warning "  No help function found for $module_name"
             echo "No help function available for this module." >> "$output_file"

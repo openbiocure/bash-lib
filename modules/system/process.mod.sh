@@ -123,3 +123,34 @@ function process.top_mem() {
     local limit="${1:-10}"
     ps aux --sort=-%mem | head -n $((limit + 1))
 }
+
+##
+## (Usage) Show process module help
+##
+function process.help() {
+    cat <<EOF
+Process Module - Process management and monitoring utilities
+
+Available Functions:
+  process.list [options]           - List running processes
+  process.count                    - Get total process count
+  process.find <name>              - Find processes by name
+  process.top_cpu [limit]          - Top processes by CPU usage
+  process.top_mem [limit]          - Top processes by memory usage
+  process.help                     - Show this help
+
+List Options:
+  -l=<number>, --limit=<number>    - Limit number of processes shown
+  --no-log                         - Fast output without logging overhead
+  --format=<format>                - Output format (compact|table|default)
+
+Examples:
+  process.list                     # List all processes
+  process.list -l=10              # List first 10 processes
+  process.list --no-log --format=compact  # Fast compact output
+  process.count                    # Get total process count
+  process.find ssh                 # Find SSH processes
+  process.top_cpu 5                # Top 5 CPU-intensive processes
+  process.top_mem 10               # Top 10 memory-intensive processes
+EOF
+}
