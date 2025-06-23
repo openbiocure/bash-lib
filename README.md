@@ -52,8 +52,7 @@ make install
 ### Basic Setup
 
 ```bash
-# Source the library
-export BASH__PATH="/opt/bash-lib"
+# Source the library (BASH__PATH is auto-detected)
 source core/init.sh
 
 # Import modules
@@ -223,8 +222,10 @@ cat Manual.md
 
 | Variable | Description | Default |
 |:--- | :--- | :--- |
-| `BASH__PATH` | Library root location | `/opt/bash-lib` |
+| `BASH__PATH` | Library root location (auto-detected by `init.sh` if unset) | `/opt/bash-lib` |
 | `BASH__VERBOSE` | Log verbosity level | `info` |
+
+> **Note:** You usually do **not** need to set `BASH__PATH` manually. The library will auto-detect its root directory when you source `core/init.sh`. Only set it if you want to override the default detection.
 
 ### Verbosity Levels
 
