@@ -1,6 +1,17 @@
 #!/bin/bash
 
-IMPORTED=".";
+# String Module for bash-lib
+# Provides string manipulation and utility functions
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_string="1"
+
+# Call import.meta.loaded if the function exists
+if command -v import.meta.loaded >/dev/null 2>&1; then
+    import.meta.loaded "string" "${BASH__PATH:-/opt/bash-lib}/modules/utils/string.mod.sh" "1.0.0" 2>/dev/null || true
+fi
+
+import console
 
 #
 # (Usage)

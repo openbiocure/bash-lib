@@ -1,8 +1,18 @@
 #!/bin/bash
 
-IMPORTED="."
+# Directory Module for bash-lib
+# Provides comprehensive file and directory management utilities
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_directory="1"
+
+# Call import.meta.loaded if the function exists (with error suppression)
+if command -v import.meta.loaded >/dev/null 2>&1; then
+    import.meta.loaded "directory" "${BASH__PATH:-/opt/bash-lib}/modules/directory/directory.mod.sh" "1.0.0" 2>/dev/null || true
+fi
 
 import console
+import string
 
 # Directory Module Configuration
 __DIR__DEFAULT_DEPTH=3
@@ -475,6 +485,7 @@ function directory.info() {
     console.info "  Type: $type"
     console.info "  Size: $size"
     console.info "  Permissions: $permissions"
+    console.info "  Permissions Description: $(directory.__permissions_to_description "$permissions")"
     console.info "  Owner: $owner"
     console.info "  Modified: $modified"
     
@@ -602,6 +613,76 @@ function directory.find_empty() {
 }
 
 # Internal helper functions
+
+function directory.__permissions_to_description() {
+    local permissions="$1"
+    
+    if [[ -z "$permissions" || "$permissions" == "Unknown" ]]; then
+        echo "Unknown permissions"
+        return
+    fi
+    
+    local description=""
+    
+    # File type
+    case ${permissions:0:1} in
+        "-") description="Regular file" ;;
+        "d") description="Directory" ;;
+        "l") description="Symbolic link" ;;
+        "c") description="Character device" ;;
+        "b") description="Block device" ;;
+        "p") description="Named pipe" ;;
+        "s") description="Socket" ;;
+        *) description="Unknown type" ;;
+    esac
+    
+    description="$description with permissions: "
+    
+    # Owner permissions
+    case ${permissions:1:3} in
+        "rwx") description="${description}owner can read, write, and execute" ;;
+        "rw-") description="${description}owner can read and write" ;;
+        "r-x") description="${description}owner can read and execute" ;;
+        "r--") description="${description}owner can read only" ;;
+        "-wx") description="${description}owner can write and execute" ;;
+        "-w-") description="${description}owner can write only" ;;
+        "--x") description="${description}owner can execute only" ;;
+        "---") description="${description}owner has no permissions" ;;
+        *) description="${description}owner has unusual permissions" ;;
+    esac
+    
+    description="$description; "
+    
+    # Group permissions
+    case ${permissions:4:3} in
+        "rwx") description="${description}group can read, write, and execute" ;;
+        "rw-") description="${description}group can read and write" ;;
+        "r-x") description="${description}group can read and execute" ;;
+        "r--") description="${description}group can read only" ;;
+        "-wx") description="${description}group can write and execute" ;;
+        "-w-") description="${description}group can write only" ;;
+        "--x") description="${description}group can execute only" ;;
+        "---") description="${description}group has no permissions" ;;
+        *) description="${description}group has unusual permissions" ;;
+    esac
+    
+    description="$description; "
+    
+    # Others permissions
+    case ${permissions:7:3} in
+        "rwx") description="${description}others can read, write, and execute" ;;
+        "rw-") description="${description}others can read and write" ;;
+        "r-x") description="${description}others can read and execute" ;;
+        "r--") description="${description}others can read only" ;;
+        "-wx") description="${description}others can write and execute" ;;
+        "-w-") description="${description}others can write only" ;;
+        "--x") description="${description}others can execute only" ;;
+        "---") description="${description}others have no permissions" ;;
+        *) description="${description}others have unusual permissions" ;;
+    esac
+    
+    echo "$description"
+}
 
 function directory.__display_simple() {
     local items=("$@")

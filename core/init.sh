@@ -1,10 +1,93 @@
 #!/bin/bash
+
+# Import metadata functions - define these first so modules can use them
+function import.meta.loaded() {
+  local module_name="$1"
+  local module_path="$2"
+  local version="${3:-unknown}"
+  
+  if [[ -n "$module_name" && -n "$module_path" ]]; then
+    echo "Module: $module_name, Version: $version, Loaded from: $module_path"
+  else
+    echo "Usage: import.meta.loaded <module_name> <module_path> [version]"
+  fi
+}
+
+function import.meta.all() {
+  echo "Loaded bash-lib modules:"
+  echo "========================"
+  declare -xp | grep '^declare \-x BASH_LIB_IMPORTED_' | while read -r line; do
+    local var_name=$(echo "$line" | cut -d'=' -f1 | sed 's/declare -x //')
+    local module_name=$(echo "$var_name" | sed 's/BASH_LIB_IMPORTED_//')
+    echo "  ✓ $module_name"
+  done
+}
+
+function import.meta.info() {
+  local module_name="$1"
+  
+  if [[ -z "$module_name" ]]; then
+    echo "Usage: import.meta.info <module_name>"
+    return 1
+  fi
+  
+  local check_var="BASH_LIB_IMPORTED_${module_name//\//_}"
+  if [[ -n "${!check_var}" ]]; then
+    echo "Module '$module_name' is loaded"
+    return 0
+  else
+    echo "Module '$module_name' is not loaded"
+    return 1
+  fi
+}
+
+function import.force() {
+  # Force reload a module even if it's already loaded
+  local module_name="$1"
+  local extension="${2:-mod.sh}"
+  
+  if [[ -z "$module_name" ]]; then
+    echo -e "\e[31mError: \e[0mNo module name provided"
+    echo -e "Usage: \e[1mimport.force <module_name> [extension]\e[0m"
+    return 1
+  fi
+  
+  # Clear the import signal to force reload
+  local check_var="BASH_LIB_IMPORTED_${module_name//\//_}"
+  unset "$check_var" 2>/dev/null || true
+  
+  # Now import normally (which will reload since signal is cleared)
+  import "$module_name" "$extension"
+}
+
+function import.meta.reload() {
+  # Reload all loaded modules
+  echo "Reloading all loaded modules..."
+  
+  declare -xp | grep '^declare \-x BASH_LIB_IMPORTED_' | while read -r line; do
+    local var_name=$(echo "$line" | cut -d'=' -f1 | sed 's/declare -x //')
+    local module_name=$(echo "$var_name" | sed 's/BASH_LIB_IMPORTED_//')
+    echo "Reloading module: $module_name"
+    import.force "$module_name"
+  done
+  
+  echo "All modules reloaded"
+}
+
 ##
 ## (Usage) import modulename if your adding and include item
 ##         you can use import config inc to mark its an inc extension
 ##  
 ## Allows you include libraries
 function import () {
+
+  # Validate that a module name is provided
+  if [[ -z "${1}" ]]; then
+      echo -e "\e[31mError: \e[0mNo module name provided"
+      echo -e "Usage: \e[1mimport <module_name> [extension]\e[0m"
+      echo -e "Example: \e[1mimport console\e[0m or \e[1mimport colors inc\e[0m"
+      return 1
+  fi
 
   local src=${BASH__PATH:-"/opt/bash-lib"};
   local extension=$([[ -z ${2} ]]  && echo "mod.sh" || echo "inc");
@@ -15,11 +98,34 @@ function import () {
       return 1;
   fi
 
+  # Check if module is already loaded
+  local check_var="BASH_LIB_IMPORTED_${1//\//_}"
+  if [[ -n "${!check_var}" ]]; then
+    # Module is already loaded, skip reloading
+    return 0
+  fi
+
   local module=$(find ${src} -name "${1}.${extension}" 2>/dev/null)
   if [[  -f ${module} ]]; then
+    # Source the module
     source ${module}
-    if [[ -z ${IMPORTED} ]]; then
-      echo -e "\e[31mError:\e[0m Failed to load \e[1m${1}.${extension}\e[0m at ${src}";
+    
+    # Check for module-specific import signal using new naming pattern
+    
+    # More robust check - try multiple ways to verify the module loaded
+    if [[ -n "${!check_var}" ]]; then
+      # Import signal is set - module loaded successfully
+      return 0
+    elif command -v "${1}.help" >/dev/null 2>&1; then
+      # Module has a help function - it's probably loaded
+      echo -e "\e[33mWarning: \e[0mModule '$1' loaded but import signal not set. This may be due to environment restrictions."
+      return 0
+    elif [[ -n "$(declare -F | grep -E "^declare -f ${1}\.")" ]]; then
+      # Module has functions defined - it's probably loaded
+      echo -e "\e[33mWarning: \e[0mModule '$1' loaded but import signal not set. This may be due to environment restrictions."
+      return 0
+    else
+      echo -e "\e[31mError:\e[0m Module '$1' did not signal a successful load"
       return 2;
     fi
   else
@@ -67,8 +173,20 @@ if [[ -n "${BASH__PATH}" ]] && [[ -d "${BASH__PATH}" ]]; then
         source "${BASH__PATH}/config/build.inc"
     fi
     
-    import trapper 2>/dev/null && trapper.addTrap 'exit 1;' 10 
-    import console 2>/dev/null
+    # Import core modules with error suppression during initialization
+    # Use a more robust approach that doesn't rely on import signals during init
+    if [[ -f "${BASH__PATH}/core/trapper.mod.sh" ]]; then
+        source "${BASH__PATH}/core/trapper.mod.sh" 2>/dev/null || true
+    fi
+    
+    if [[ -f "${BASH__PATH}/modules/system/console.mod.sh" ]]; then
+        source "${BASH__PATH}/modules/system/console.mod.sh" 2>/dev/null || true
+    fi
+    
+    # Only add trap if trapper was successfully imported
+    if command -v trapper.addTrap >/dev/null 2>&1; then
+        trapper.addTrap 'exit 1;' 10 
+    fi
     
     [[ -z ${BASH__VERBOSE} ]] &&  export BASH__VERBOSE=info || export BASH__VERBOSE=${BASH__VERBOSE};
     

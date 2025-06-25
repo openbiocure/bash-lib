@@ -1,8 +1,18 @@
 #!/bin/bash
 
-IMPORTED="."
+# Math Module for bash-lib
+# Provides mathematical operations and utilities
 
-import mathExceptions;
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_math="1"
+
+# Call import.meta.loaded if the function exists
+if command -v import.meta.loaded >/dev/null 2>&1; then
+    import.meta.loaded "math" "${BASH__PATH:-/opt/bash-lib}/modules/math/math.mod.sh" "1.0.0" 2>/dev/null || true
+fi
+
+import console
+import mathExceptions
 
 #
 # (Usage)

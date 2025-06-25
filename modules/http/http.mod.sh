@@ -1,6 +1,15 @@
 #!/bin/bash
 
-IMPORTED="."
+# HTTP Module for bash-lib
+# Provides comprehensive HTTP client functionality
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_http="1"
+
+# Call import.meta.loaded if the function exists
+if command -v import.meta.loaded >/dev/null 2>&1; then
+    import.meta.loaded "http" "${BASH__PATH:-/opt/bash-lib}/modules/http/http.mod.sh" "1.0.0" 2>/dev/null || true
+fi
 
 import console
 

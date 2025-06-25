@@ -1,5 +1,15 @@
 #!/bin/bash
-IMPORTED="./"
+
+# Colors Module for bash-lib
+# Provides color constants for terminal output
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_colors="1"
+
+# Call import.meta.loaded if the function exists (with error suppression)
+if command -v import.meta.loaded >/dev/null 2>&1; then
+    import.meta.loaded "colors" "${BASH__PATH:-/opt/bash-lib}/config/colors.inc" "1.0.0" 2>/dev/null || true
+fi
 
 # Reset
 Color_Off='\033[0m'       # Text Reset

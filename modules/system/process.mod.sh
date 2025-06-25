@@ -1,6 +1,12 @@
 #!/bin/bash
 
-IMPORTED="."
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_process="1"
+
+# Call import.meta.loaded if the function exists (with error suppression)
+if command -v import.meta.loaded >/dev/null 2>&1; then
+    import.meta.loaded "process" "${BASH__PATH:-/opt/bash-lib}/modules/system/process.mod.sh" "1.0.0" 2>/dev/null || true
+fi
 
 import console
 
