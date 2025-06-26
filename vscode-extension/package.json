@@ -1,0 +1,51 @@
+{
+    "name": "bash-lib",
+    "displayName": "bash-lib Support",
+    "description": "Enhanced support for bash-lib development",
+    "version": "1.0.0",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Snippets",
+        "Other"
+    ],
+    "activationEvents": [
+        "onLanguage:shellscript"
+    ],
+    "main": "./extension.js",
+    "contributes": {
+        "snippets": [
+            {
+                "language": "shellscript",
+                "path": "./snippets/bash-lib.json"
+            }
+        ],
+        "configuration": {
+            "title": "bash-lib",
+            "properties": {
+                "bashLib.enableAutocomplete": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable bash-lib autocomplete"
+                },
+                "bashLib.includeAllModules": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Include all bash-lib modules in autocomplete"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.60.0",
+        "@types/node": "^14.14.37",
+        "typescript": "^4.3.5"
+    }
+} 

@@ -1,0 +1,223 @@
+{
+    "bash-lib import": {
+        "prefix": "bl-import",
+        "body": [
+            "import ${1:module_name}"
+        ],
+        "description": "Import a bash-lib module"
+    },
+    "bash-lib import force": {
+        "prefix": "bl-import-force",
+        "body": [
+            "import.force ${1:module_name}"
+        ],
+        "description": "Force import a bash-lib module"
+    },
+    "bash-lib console log": {
+        "prefix": "bl-console-log",
+        "body": [
+            "console.log \"${1:message}\""
+        ],
+        "description": "Console log message"
+    },
+    "bash-lib console info": {
+        "prefix": "bl-console-info",
+        "body": [
+            "console.info \"${1:message}\""
+        ],
+        "description": "Console info message"
+    },
+    "bash-lib console error": {
+        "prefix": "bl-console-error",
+        "body": [
+            "console.error \"${1:message}\""
+        ],
+        "description": "Console error message"
+    },
+    "bash-lib console success": {
+        "prefix": "bl-console-success",
+        "body": [
+            "console.success \"${1:message}\""
+        ],
+        "description": "Console success message"
+    },
+    "bash-lib file create": {
+        "prefix": "bl-file-create",
+        "body": [
+            "file.create \"${1:path}\" --content=\"${2:content}\""
+        ],
+        "description": "Create a file with content"
+    },
+    "bash-lib file read": {
+        "prefix": "bl-file-read",
+        "body": [
+            "file.read \"${1:path}\""
+        ],
+        "description": "Read file content"
+    },
+    "bash-lib file write": {
+        "prefix": "bl-file-write",
+        "body": [
+            "file.write \"${1:path}\" \"${2:content}\""
+        ],
+        "description": "Write content to file"
+    },
+    "bash-lib file delete": {
+        "prefix": "bl-file-delete",
+        "body": [
+            "file.delete \"${1:path}\""
+        ],
+        "description": "Delete a file"
+    },
+    "bash-lib directory list": {
+        "prefix": "bl-dir-list",
+        "body": [
+            "directory.list \"${1:path}\""
+        ],
+        "description": "List directory contents"
+    },
+    "bash-lib directory create": {
+        "prefix": "bl-dir-create",
+        "body": [
+            "directory.create \"${1:path}\""
+        ],
+        "description": "Create a directory"
+    },
+    "bash-lib string length": {
+        "prefix": "bl-str-length",
+        "body": [
+            "string.length \"${1:text}\""
+        ],
+        "description": "Get string length"
+    },
+    "bash-lib string upper": {
+        "prefix": "bl-str-upper",
+        "body": [
+            "string.upper \"${1:text}\""
+        ],
+        "description": "Convert string to uppercase"
+    },
+    "bash-lib string lower": {
+        "prefix": "bl-str-lower",
+        "body": [
+            "string.lower \"${1:text}\""
+        ],
+        "description": "Convert string to lowercase"
+    },
+    "bash-lib string trim": {
+        "prefix": "bl-str-trim",
+        "body": [
+            "string.trim \"${1:text}\""
+        ],
+        "description": "Trim whitespace from string"
+    },
+    "bash-lib http get": {
+        "prefix": "bl-http-get",
+        "body": [
+            "http.get \"${1:url}\""
+        ],
+        "description": "HTTP GET request"
+    },
+    "bash-lib http post": {
+        "prefix": "bl-http-post",
+        "body": [
+            "http.post \"${1:url}\" --data=\"${2:data}\""
+        ],
+        "description": "HTTP POST request"
+    },
+    "bash-lib math add": {
+        "prefix": "bl-math-add",
+        "body": [
+            "math.add ${1:num1} ${2:num2}"
+        ],
+        "description": "Add two numbers"
+    },
+    "bash-lib date now": {
+        "prefix": "bl-date-now",
+        "body": [
+            "date.now"
+        ],
+        "description": "Get current date/time"
+    },
+    "bash-lib user create": {
+        "prefix": "bl-user-create",
+        "body": [
+            "user.create \"${1:username}\""
+        ],
+        "description": "Create a new user"
+    },
+    "bash-lib user list": {
+        "prefix": "bl-user-list",
+        "body": [
+            "user.list"
+        ],
+        "description": "List all users"
+    },
+    "bash-lib permission set": {
+        "prefix": "bl-perm-set",
+        "body": [
+            "permission.set \"${1:path}\" ${2:mode}"
+        ],
+        "description": "Set file permissions"
+    },
+    "bash-lib compression zip": {
+        "prefix": "bl-compress-zip",
+        "body": [
+            "compression.zip \"${1:archive.zip}\" \"${2:files}\""
+        ],
+        "description": "Create zip archive"
+    },
+    "bash-lib compression unzip": {
+        "prefix": "bl-compress-unzip",
+        "body": [
+            "compression.unzip \"${1:archive.zip}\" \"${2:destination}\""
+        ],
+        "description": "Extract zip archive"
+    },
+    "bash-lib process list": {
+        "prefix": "bl-proc-list",
+        "body": [
+            "process.list"
+        ],
+        "description": "List running processes"
+    },
+    "bash-lib trapper addTrap": {
+        "prefix": "bl-trap-add",
+        "body": [
+            "trapper.addTrap '${1:command}' ${2:EXIT}"
+        ],
+        "description": "Add signal trap"
+    },
+    "bash-lib module help": {
+        "prefix": "bl-help",
+        "body": [
+            "${1:module}.help"
+        ],
+        "description": "Show module help"
+    },
+    "bash-lib source init": {
+        "prefix": "bl-source",
+        "body": [
+            "source core/init.sh"
+        ],
+        "description": "Source bash-lib initialization"
+    },
+    "bash-lib complete script": {
+        "prefix": "bl-script",
+        "body": [
+            "#!/bin/bash",
+            "",
+            "# Import bash-lib",
+            "source core/init.sh",
+            "import console",
+            "import ${1:module}",
+            "",
+            "echo \"=== ${2:Script Name} ===\"",
+            "",
+            "${3:// Your code here}",
+            "",
+            "echo \"=== Complete ===\""
+        ],
+        "description": "Complete bash-lib script template"
+    }
+} 

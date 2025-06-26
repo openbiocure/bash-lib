@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "ms-vscode.vscode-json",
+        "ms-vscode.powershell",
+        "ms-vscode.shellscript",
+        "foxundermoon.shell-format",
+        "timonwong.shellcheck",
+        "ms-vscode.vscode-typescript-next",
+        "ms-vscode.vscode-markdown",
+        "yzhang.markdown-all-in-one",
+        "ms-vscode.vscode-yaml",
+        "redhat.vscode-yaml"
+    ]
+} 

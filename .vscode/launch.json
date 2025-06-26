@@ -1,15 +1,36 @@
 {
-  "version": "2.0.0",
+  "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug Current Script",
       "type": "bashdb",
       "request": "launch",
-      "name": "Program",
       "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "terminalKind": "integrated"
+    },
+    {
+      "name": "Debug with bash-lib",
+      "type": "bashdb",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "terminalKind": "integrated",
       "env": {
         "BASH__PATH": "${workspaceFolder}",
-        "BASH__DEBUG": true,
-        "ENTRY__POINT": "${file}"
+        "BASH__VERBOSE": "debug"
+      }
+    },
+    {
+      "name": "Run Example Script",
+      "type": "bashdb",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "terminalKind": "integrated",
+      "env": {
+        "BASH__PATH": "${workspaceFolder}",
+        "BASH__VERBOSE": "info"
       }
     }
   ]

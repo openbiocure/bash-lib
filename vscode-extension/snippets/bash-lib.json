@@ -1,0 +1,139 @@
+{
+    "bash-lib import": {
+        "prefix": "bl-import",
+        "body": [
+            "import ${1:module_name}"
+        ],
+        "description": "Import a bash-lib module"
+    },
+    "bash-lib source init": {
+        "prefix": "bl-source",
+        "body": [
+            "source core/init.sh"
+        ],
+        "description": "Source bash-lib initialization"
+    },
+    "bash-lib console log": {
+        "prefix": "bl-console-log",
+        "body": [
+            "console.log \"${1:message}\""
+        ],
+        "description": "Console log message"
+    },
+    "bash-lib console info": {
+        "prefix": "bl-console-info",
+        "body": [
+            "console.info \"${1:message}\""
+        ],
+        "description": "Console info message"
+    },
+    "bash-lib console error": {
+        "prefix": "bl-console-error",
+        "body": [
+            "console.error \"${1:message}\""
+        ],
+        "description": "Console error message"
+    },
+    "bash-lib file create": {
+        "prefix": "bl-file-create",
+        "body": [
+            "file.create \"${1:path}\" --content=\"${2:content}\""
+        ],
+        "description": "Create a file with content"
+    },
+    "bash-lib file read": {
+        "prefix": "bl-file-read",
+        "body": [
+            "file.read \"${1:path}\""
+        ],
+        "description": "Read file content"
+    },
+    "bash-lib file write": {
+        "prefix": "bl-file-write",
+        "body": [
+            "file.write \"${1:path}\" \"${2:content}\""
+        ],
+        "description": "Write content to file"
+    },
+    "bash-lib directory list": {
+        "prefix": "bl-dir-list",
+        "body": [
+            "directory.list \"${1:path}\""
+        ],
+        "description": "List directory contents"
+    },
+    "bash-lib string length": {
+        "prefix": "bl-str-length",
+        "body": [
+            "string.length \"${1:text}\""
+        ],
+        "description": "Get string length"
+    },
+    "bash-lib string upper": {
+        "prefix": "bl-str-upper",
+        "body": [
+            "string.upper \"${1:text}\""
+        ],
+        "description": "Convert string to uppercase"
+    },
+    "bash-lib string lower": {
+        "prefix": "bl-str-lower",
+        "body": [
+            "string.lower \"${1:text}\""
+        ],
+        "description": "Convert string to lowercase"
+    },
+    "bash-lib http get": {
+        "prefix": "bl-http-get",
+        "body": [
+            "http.get \"${1:url}\""
+        ],
+        "description": "Perform HTTP GET request"
+    },
+    "bash-lib http post": {
+        "prefix": "bl-http-post",
+        "body": [
+            "http.post \"${1:url}\" --data=\"${2:data}\""
+        ],
+        "description": "Perform HTTP POST request"
+    },
+    "bash-lib math add": {
+        "prefix": "bl-math-add",
+        "body": [
+            "math.add ${1:num1} ${2:num2}"
+        ],
+        "description": "Add two numbers"
+    },
+    "bash-lib date now": {
+        "prefix": "bl-date-now",
+        "body": [
+            "date.now"
+        ],
+        "description": "Get current date and time"
+    },
+    "bash-lib complete script": {
+        "prefix": "bl-script",
+        "body": [
+            "#!/bin/bash",
+            "",
+            "# Import bash-lib",
+            "source core/init.sh",
+            "import console",
+            "import ${1:module}",
+            "",
+            "echo \"=== ${2:Script Name} ===\"",
+            "",
+            "${3:// Your code here}",
+            "",
+            "echo \"=== Complete ===\""
+        ],
+        "description": "Complete bash-lib script template"
+    },
+    "bash-lib module help": {
+        "prefix": "bl-help",
+        "body": [
+            "${1:module}.help"
+        ],
+        "description": "Show module help"
+    }
+} 

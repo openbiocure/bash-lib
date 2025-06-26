@@ -1,0 +1,124 @@
+{
+    "folders": [
+        {
+            "name": "bash-lib",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "files.associations": {
+            "*.mod.sh": "shellscript",
+            "*.inc": "shellscript"
+        },
+        "bashIde.includeAllWorkspaceSymbols": true,
+        "bashIde.globalVariables": [
+            "BASH__PATH",
+            "BASH__VERBOSE",
+            "BASH__RELEASE",
+            "BASH_LIB_IMPORTED_console",
+            "BASH_LIB_IMPORTED_file",
+            "BASH_LIB_IMPORTED_directory",
+            "BASH_LIB_IMPORTED_string",
+            "BASH_LIB_IMPORTED_math",
+            "BASH_LIB_IMPORTED_date",
+            "BASH_LIB_IMPORTED_http",
+            "BASH_LIB_IMPORTED_user",
+            "BASH_LIB_IMPORTED_permission",
+            "BASH_LIB_IMPORTED_compression",
+            "BASH_LIB_IMPORTED_process",
+            "BASH_LIB_IMPORTED_trapper"
+        ],
+        "bashIde.shellcheckArguments": [
+            "--shell=bash",
+            "--severity=style"
+        ],
+        "bashIde.highlightParsingErrors": true,
+        "bashIde.logLevel": "info",
+        "emmet.includeLanguages": {
+            "shellscript": "html"
+        },
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "files.trimFinalNewlines": true,
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/bower_components": true,
+            "**/*.code-search": true,
+            "**/test_*": true,
+            "**/debug_*": true
+        },
+        "files.exclude": {
+            "**/.git": true,
+            "**/.DS_Store": true,
+            "**/Thumbs.db": true,
+            "**/test_*": true,
+            "**/debug_*": true
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-vscode.vscode-json",
+            "ms-vscode.powershell",
+            "ms-vscode.shellscript",
+            "foxundermoon.shell-format",
+            "timonwong.shellcheck",
+            "ms-vscode.vscode-typescript-next",
+            "ms-vscode.vscode-markdown",
+            "yzhang.markdown-all-in-one",
+            "ms-vscode.vscode-yaml",
+            "redhat.vscode-yaml",
+            "ms-vscode.vscode-bash-debug"
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "Run Current Script",
+                "type": "shell",
+                "command": "bash",
+                "args": ["${file}"],
+                "group": "build",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared",
+                    "showReuseMessage": true,
+                    "clear": false
+                }
+            },
+            {
+                "label": "Generate Manual",
+                "type": "shell",
+                "command": "./manual.sh",
+                "group": "build",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared",
+                    "showReuseMessage": true,
+                    "clear": false
+                }
+            },
+            {
+                "label": "Activate Completion",
+                "type": "shell",
+                "command": "source",
+                "args": ["activate-completion.sh"],
+                "group": "build",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared",
+                    "showReuseMessage": true,
+                    "clear": false
+                }
+            }
+        ]
+    }
+} 

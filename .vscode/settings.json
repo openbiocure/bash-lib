@@ -1,0 +1,23 @@
+{
+    "bashIde.includeAllWorkspaceSymbols": true,
+    "bashIde.globalVariables": [
+        "BASH__PATH",
+        "BASH__VERBOSE",
+        "BASH__RELEASE"
+    ],
+    "bashIde.shellcheckArguments": [
+        "--shell=bash",
+        "--severity=style"
+    ],
+    "files.associations": {
+        "*.mod.sh": "shellscript",
+        "*.inc": "shellscript"
+    },
+    "emmet.includeLanguages": {
+        "shellscript": "html"
+    },
+    "shellcheck.executablePath": "/usr/local/bin/shellcheck",
+    "bashIde.highlightParsingErrors": true,
+    "bashIde.explainshellEndpoint": "https://explainshell.com/explain",
+    "bashIde.logLevel": "info"
+} 
