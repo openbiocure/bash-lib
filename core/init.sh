@@ -7,7 +7,11 @@ function import.meta.loaded() {
   local version="${3:-unknown}"
   
   if [[ -n "$module_name" && -n "$module_path" ]]; then
-    echo "Module: $module_name, Version: $version, Loaded from: $module_path"
+    # Check if module is already loaded to avoid duplicate messages
+    local check_var="BASH_LIB_IMPORTED_${module_name//\//_}"
+    if [[ -z "${!check_var}" ]]; then
+      echo "Module: $module_name, Version: $version, Loaded from: $module_path"
+    fi
   else
     echo "Usage: import.meta.loaded <module_name> <module_path> [version]"
   fi
@@ -52,9 +56,18 @@ function import.force() {
     return 1
   fi
   
-  # Clear the import signal to force reload
+  # Check if module is already loaded
   local check_var="BASH_LIB_IMPORTED_${module_name//\//_}"
-  unset "$check_var" 2>/dev/null || true
+  local already_loaded=false
+  
+  if [[ -n "${!check_var}" ]]; then
+    already_loaded=true
+  fi
+  
+  # Only clear the import signal if we're actually forcing a reload
+  if [[ "$already_loaded" == "true" ]]; then
+    unset "$check_var" 2>/dev/null || true
+  fi
   
   # Handle special cases for modules in subdirectories
   # 
@@ -95,33 +108,41 @@ function import.force() {
     *)
       # For modules that follow the standard pattern: modules/module-name/module-name.mod.sh
       # Examples: file, http, math, date, etc.
+      # Use the regular import function which has proper guard checking
       import "$module_name" "$extension"
       return $?
       ;;
   esac
   
-  # Source the module directly using the hardcoded path
-  if [[ -f "$module_path" ]]; then
-    source "$module_path"
-    
-    # Check if module loaded successfully using multiple verification methods
-    if [[ -n "${!check_var}" ]]; then
-      # Import signal is set - module loaded successfully
-      echo "Module: $module_name, Version: 1.0.0, Loaded from: $module_path"
-      return 0
-    elif command -v "${module_name}.help" >/dev/null 2>&1; then
-      # Module has a help function - it's probably loaded
-      echo "Module: $module_name, Version: 1.0.0, Loaded from: $module_path"
-      return 0
+  # Only proceed with direct sourcing if this is a force reload (not first-time import)
+  if [[ "$already_loaded" == "true" ]]; then
+    # Source the module directly using the hardcoded path
+    if [[ -f "$module_path" ]]; then
+      source "$module_path"
+      
+      # Check if module loaded successfully using multiple verification methods
+      if [[ -n "${!check_var}" ]]; then
+        # Import signal is set - module loaded successfully
+        echo "Module: $module_name, Version: 1.0.0, Loaded from: $module_path"
+        return 0
+      elif command -v "${module_name}.help" >/dev/null 2>&1; then
+        # Module has a help function - it's probably loaded
+        echo "Module: $module_name, Version: 1.0.0, Loaded from: $module_path"
+        return 0
+      else
+        # Module failed to load or signal properly
+        echo -e "\e[31mError:\e[0m Module '$module_name' did not signal a successful load"
+        return 2
+      fi
     else
-      # Module failed to load or signal properly
-      echo -e "\e[31mError:\e[0m Module '$module_name' did not signal a successful load"
-      return 2
+      # Module file not found at the expected path
+      echo -e "\e[31mError: \e[0mCannot find \e[1m${module_name}\e[0m library at: $module_path"
+      return 3
     fi
   else
-    # Module file not found at the expected path
-    echo -e "\e[31mError: \e[0mCannot find \e[1m${module_name}\e[0m library at: $module_path"
-    return 3
+    # For first-time imports, use the regular import function
+    import "$module_name" "$extension"
+    return $?
   fi
 }
 
@@ -170,6 +191,55 @@ function import () {
     return 0
   fi
 
+  # Handle special cases for modules in subdirectories
+  local module_path=""
+  case "$1" in
+    "console")
+      # System-level console logging module
+      module_path="${src}/modules/system/console.mod.sh"
+      ;;
+    "trapper")
+      # System-level signal handling and error trapping module
+      module_path="${src}/modules/system/trapper.mod.sh"
+      ;;
+    "engine")
+      # Core engine functionality for module management
+      module_path="${src}/modules/core/engine.mod.sh"
+      ;;
+    "colors")
+      # Configuration file for color definitions (not a module, but needs special handling)
+      module_path="${src}/config/colors.inc"
+      ;;
+  esac
+
+  # If we have a special case path, use it
+  if [[ -n "$module_path" ]]; then
+    if [[ -f "$module_path" ]]; then
+      source "$module_path"
+      
+      # Check for module-specific import signal using new naming pattern
+      if [[ -n "${!check_var}" ]]; then
+        # Import signal is set - module loaded successfully
+        return 0
+      elif command -v "${1}.help" >/dev/null 2>&1; then
+        # Module has a help function - it's probably loaded
+        echo -e "\e[33mWarning: \e[0mModule '$1' loaded but import signal not set. This may be due to environment restrictions."
+        return 0
+      elif [[ -n "$(declare -F | grep -E "^declare -f ${1}\.")" ]]; then
+        # Module has functions defined - it's probably loaded
+        echo -e "\e[33mWarning: \e[0mModule '$1' loaded but import signal not set. This may be due to environment restrictions."
+        return 0
+      else
+        echo -e "\e[31mError:\e[0m Module '$1' did not signal a successful load"
+        return 2;
+      fi
+    else
+      echo -e "\e[31mError: \e[0mCannot find \e[1m${1}\e[0m library at: $module_path"
+      return 3
+    fi
+  fi
+
+  # Standard module discovery using find
   local module=$(find ${src} -name "${1}.${extension}" 2>/dev/null)
   if [[  -f ${module} ]]; then
     # Source the module
@@ -245,7 +315,7 @@ if [[ -n "${BASH__PATH}" ]] && [[ -d "${BASH__PATH}" ]]; then
     fi
     
     # Import core modules with error suppression during initialization
-    # Use a more robust approach that doesn't rely on import signals during init
+    # Use direct sourcing to avoid circular dependencies during init
     if [[ -f "${BASH__PATH}/modules/system/trapper.mod.sh" ]]; then
         source "${BASH__PATH}/modules/system/trapper.mod.sh" 2>/dev/null || true
     fi
