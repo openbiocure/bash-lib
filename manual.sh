@@ -7,44 +7,35 @@
 source core/init.sh
 import console
 import file
-import directory
 import string
 import engine
 
 # Set output file
 manual_file="Manual.md"
 
-# Helper: Print status/info/warning/error using console module
-status()   { console.info   "$1"; }
-warning()  { console.warn   "$1"; }
-error()    { console.error "$1"; }
-success()  { console.success "$1"; }
+# Helper: Print status/info/warning/error using console module (suppress output)
+status()   { console.info   "$1" >/dev/null 2>&1; }
+warning()  { console.warn   "$1" >/dev/null 2>&1; }
+error()    { console.error "$1" >/dev/null 2>&1; }
+success()  { console.success "$1" >/dev/null 2>&1; }
 
-# Helper: Capitalize first letter using string module
+# Helper: Simple capitalize first letter (no file operations)
 capitalize() {
-    string.upper "${1:0:1}" > /tmp/__cap.tmp
-    string.lower "${1:1}" > /tmp/__rest.tmp
-    file.read /tmp/__cap.tmp > /tmp/__cap2.tmp
-    file.read /tmp/__rest.tmp > /tmp/__rest2.tmp
-    cap=$(file.read /tmp/__cap2.tmp)
-    rest=$(file.read /tmp/__rest2.tmp)
-    file.delete /tmp/__cap.tmp
-    file.delete /tmp/__rest.tmp
-    file.delete /tmp/__cap2.tmp
-    file.delete /tmp/__rest2.tmp
-    console.log "$cap$rest" > /tmp/__final_cap.tmp
-    file.read /tmp/__final_cap.tmp
-    file.delete /tmp/__final_cap.tmp
+    first=$(echo "$1" | cut -c1)
+    rest=$(echo "$1" | cut -c2-)
+    cap=$(string.upper "$first" 2>/dev/null)
+    low=$(string.lower "$rest" 2>/dev/null)
+    echo "${cap}${low}"
 }
 
 # Helper: Append to manual file
 append_manual() {
-    file.write "$manual_file" "$1" --append
+    file.write "$manual_file" "$1" --append >/dev/null 2>&1
 }
 
 # Helper: Create manual file
 create_manual() {
-    file.create "$manual_file" "$1" --overwrite
+    file.create "$manual_file" "$1" --overwrite >/dev/null 2>&1
 }
 
 # Main manual generation logic
@@ -54,70 +45,128 @@ main() {
     # Delete existing file and create fresh
     file.delete "$manual_file" 2>/dev/null || true
 
-    # Header
-    create_manual "# bash-lib Manual\n\nA comprehensive bash library providing modular utilities for common shell operations.\n\n## Table of Contents\n"
+    # Create header step by step
+    echo "# bash-lib Manual" > "$manual_file"
+    echo "" >> "$manual_file"
+    echo "A comprehensive bash library providing modular utilities for common shell operations." >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "## Summary" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "bash-lib is a modular shell scripting library that provides:" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "- **15+ modules** covering file operations, HTTP requests, user management, and more" >> "$manual_file"
+    echo "- **Structured logging** with color-coded output and verbosity control" >> "$manual_file"
+    echo "- **Error handling** with comprehensive signal trapping and cleanup" >> "$manual_file"
+    echo "- **Developer-friendly APIs** that make shell scripting readable and maintainable" >> "$manual_file"
+    echo "- **Auto-generated documentation** from built-in help functions" >> "$manual_file"
+    echo "- **Cross-platform compatibility** with POSIX-compliant shell operations" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "## Table of Contents" >> "$manual_file"
 
-    # Get list of modules using engine.modules
+    # Get list of modules using engine.modules (simple output)
     engine.modules > /tmp/__modules.tmp 2>/dev/null || {
         error "Failed to get module list from engine.modules"
         return 1
     }
 
-    # Extract module names from engine.modules output and build TOC
-    file.read /tmp/__modules.tmp | while read -r line; do
-        # Extract module name from lines like: "25/06/2025 15:30:55 - EPAEDUBW001A - test_engine.sh - [LOG]: file"
-        if [[ "$line" == *" - [LOG]: "* ]]; then
-            local module_name=$(echo "$line" | sed 's/.* - \[LOG\]: //')
-            if [[ -n "$module_name" ]]; then
-                local module_title=$(capitalize "$module_name")
-                append_manual "- [${module_title}](#${module_name})\n"
-                status "  Added to TOC: $module_name"
-            fi
+    # Build Table of Contents from simple module names
+    while read -r module_name; do
+        if [[ -n "$module_name" ]]; then
+            local module_title=$(capitalize "$module_name")
+            echo "- [${module_title}](#${module_name})" >> "$manual_file"
+            status "  Added to TOC: $module_name"
         fi
-    done
-    file.delete /tmp/__modules.tmp
+    done < /tmp/__modules.tmp
+    file.delete /tmp/__modules.tmp 2>/dev/null
 
-    append_manual "\n## Installation\n\n\`\`\`bash\n# Clone the repository\ngit clone <repository-url>\ncd bash-lib\n\n# Install dependencies\nmake install-deps\n\n# Install bash-lib\nmake install\n\`\`\`\n\n## Usage\n\n\`\`\`bash\n# Source the library\nexport BASH__PATH=\"/path/to/bash-lib\"\nsource core/init.sh\n\n# Import a module\nimport directory\nimport http\nimport math\n\n# Use the functions\ndirectory.create /tmp/test\nhttp.get https://api.example.com\nmath.add 5 3\n\`\`\`\n\n## Modules\n"
+    echo "" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "## Installation" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo '```sh' >> "$manual_file"
+    echo "# Clone the repository" >> "$manual_file"
+    echo "git clone <repository-url>" >> "$manual_file"
+    echo "cd bash-lib" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "# Install dependencies" >> "$manual_file"
+    echo "make install-deps" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "# Install bash-lib" >> "$manual_file"
+    echo "make install" >> "$manual_file"
+    echo '```' >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "## Usage" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo '```sh' >> "$manual_file"
+    echo "# Source the library" >> "$manual_file"
+    echo 'export BASH__PATH="/path/to/bash-lib"' >> "$manual_file"
+    echo "source core/init.sh" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "# Import a module" >> "$manual_file"
+    echo "import directory" >> "$manual_file"
+    echo "import http" >> "$manual_file"
+    echo "import math" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "# Use the functions" >> "$manual_file"
+    echo "directory.create /tmp/test" >> "$manual_file"
+    echo "http.get https://api.example.com" >> "$manual_file"
+    echo "math.add 5 3" >> "$manual_file"
+    echo '```' >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "## Modules" >> "$manual_file"
 
     # Get modules again for documentation
     engine.modules > /tmp/__modules2.tmp 2>/dev/null
 
     # For each module, add section
-    file.read /tmp/__modules2.tmp | while read -r line; do
-        if [[ "$line" == *" - [LOG]: "* ]]; then
-            local module_name=$(echo "$line" | sed 's/.* - \[LOG\]: //')
-            if [[ -n "$module_name" ]]; then
-                local module_title=$(capitalize "$module_name")
-                append_manual "\n### $module_title\n\n"
-                
-                status "  Processing module: $module_name"
-                
-                # Get help content by importing module and calling help function
-                if import "$module_name" 2>/dev/null; then
-                    local help_func="${module_name}.help"
-                    if type "$help_func" >/dev/null 2>&1; then
-                        append_manual '\`\`\`bash\n'
-                        "$help_func" > /tmp/__help.tmp 2>/dev/null || echo "Help function failed to execute" > /tmp/__help.tmp
-                        file.read /tmp/__help.tmp | while read -r help_line; do
-                            append_manual "$help_line\n"
-                        done
-                        append_manual '\`\`\`\n'
-                        file.delete /tmp/__help.tmp
-                        status "  Added help content for: $module_name"
-                    else
-                        warning "  No help function found for $module_name"
-                        append_manual "No help function available for this module.\n"
-                    fi
+    while read -r module_name; do
+        if [[ -n "$module_name" ]]; then
+            local module_title=$(capitalize "$module_name")
+            echo "" >> "$manual_file"
+            echo "### $module_title" >> "$manual_file"
+            echo "" >> "$manual_file"
+            
+            status "  Processing module: $module_name"
+            
+            # Get help content by importing module and calling help function
+            if import "$module_name" 2>/dev/null; then
+                local help_func="${module_name}.help"
+                if type "$help_func" >/dev/null 2>&1; then
+                    echo '```sh' >> "$manual_file"
+                    "$help_func" > /tmp/__help.tmp 2>/dev/null || echo "Help function failed to execute" > /tmp/__help.tmp
+                    # Clean up escaped characters only, don't touch backticks
+                    cat /tmp/__help.tmp | tr -d '\r' | sed 's/\\\$/\$/g; s/\\`/`/g' >> "$manual_file"
+                    echo '```' >> "$manual_file"
+                    file.delete /tmp/__help.tmp 2>/dev/null
+                    status "  Added help content for: $module_name"
                 else
-                    warning "  Failed to import module $module_name"
-                    append_manual "Failed to import module.\n"
+                    warning "  No help function found for $module_name"
+                    echo "No help function available for this module." >> "$manual_file"
                 fi
+            else
+                warning "  Failed to import module $module_name"
+                echo "Failed to import module." >> "$manual_file"
             fi
         fi
-    done
-    file.delete /tmp/__modules2.tmp
+    done < /tmp/__modules2.tmp
+    file.delete /tmp/__modules2.tmp 2>/dev/null
 
-    append_manual "\n## Contributing\n\n1. Fork the repository\n2. Create a feature branch\n3. Add your module or improvements\n4. Write tests for your changes\n5. Submit a pull request\n\n## License\n\nThis project is licensed under the MIT License - see the LICENSE file for details.\n\n---\n\n*Generated automatically by manual.sh*\n"
+    echo "" >> "$manual_file"
+    echo "## Contributing" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "1. Fork the repository" >> "$manual_file"
+    echo "2. Create a feature branch" >> "$manual_file"
+    echo "3. Add your module or improvements" >> "$manual_file"
+    echo "4. Write tests for your changes" >> "$manual_file"
+    echo "5. Submit a pull request" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "## License" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "This project is licensed under the MIT License - see the LICENSE file for details." >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "---" >> "$manual_file"
+    echo "" >> "$manual_file"
+    echo "*Generated automatically by manual.sh*" >> "$manual_file"
 
     success "Manual generated successfully: $manual_file"
 }

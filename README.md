@@ -324,7 +324,7 @@ egrep -Rin "TODO|FIXME" -R *
 
 ## 📚 Documentation
 
-- **Manual.md** - Auto-generated from module help functions
+- **[Manual.md](Manual.md)** - Auto-generated from module help functions
 - **CHANGELOG.md** - Complete change history
 - **Module Help** - Each module has built-in help: `module.help`
 

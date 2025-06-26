@@ -57,43 +57,69 @@ function import.force() {
   unset "$check_var" 2>/dev/null || true
   
   # Handle special cases for modules in subdirectories
+  # 
+  # DECISION: We use hardcoded paths for certain modules because:
+  # 1. The standard import function uses 'find' to locate files with pattern: ${module_name}.${extension}
+  # 2. Some modules are organized in subdirectories (e.g., modules/system/console.mod.sh)
+  # 3. The find command searches recursively, but the import function expects exact module names
+  # 4. This creates a mismatch between module organization and import discovery
+  #
+  # ALTERNATIVES CONSIDERED:
+  # - Modify import function to handle subdirectories better (complex, breaks existing logic)
+  # - Use symlinks (maintenance overhead, potential confusion)
+  # - Require full paths in imports (user-unfriendly)
+  #
+  # CURRENT SOLUTION:
+  # - Keep the standard import function simple and predictable
+  # - Add special cases here for modules that don't follow the flat structure
+  # - This maintains backward compatibility while supporting organized module structure
+  #
   local module_path=""
   case "$module_name" in
     "console")
+      # System-level console logging module
       module_path="${BASH__PATH}/modules/system/console.mod.sh"
       ;;
     "trapper")
+      # System-level signal handling and error trapping module
       module_path="${BASH__PATH}/modules/system/trapper.mod.sh"
       ;;
     "engine")
+      # Core engine functionality for module management
       module_path="${BASH__PATH}/modules/core/engine.mod.sh"
       ;;
     "colors")
+      # Configuration file for color definitions (not a module, but needs special handling)
       module_path="${BASH__PATH}/config/colors.inc"
       ;;
     *)
-      # For other modules, use the import function
+      # For modules that follow the standard pattern: modules/module-name/module-name.mod.sh
+      # Examples: file, http, math, date, etc.
       import "$module_name" "$extension"
       return $?
       ;;
   esac
   
-  # Source the module directly
+  # Source the module directly using the hardcoded path
   if [[ -f "$module_path" ]]; then
     source "$module_path"
     
-    # Check if module loaded successfully
+    # Check if module loaded successfully using multiple verification methods
     if [[ -n "${!check_var}" ]]; then
+      # Import signal is set - module loaded successfully
       echo "Module: $module_name, Version: 1.0.0, Loaded from: $module_path"
       return 0
     elif command -v "${module_name}.help" >/dev/null 2>&1; then
+      # Module has a help function - it's probably loaded
       echo "Module: $module_name, Version: 1.0.0, Loaded from: $module_path"
       return 0
     else
+      # Module failed to load or signal properly
       echo -e "\e[31mError:\e[0m Module '$module_name' did not signal a successful load"
       return 2
     fi
   else
+    # Module file not found at the expected path
     echo -e "\e[31mError: \e[0mCannot find \e[1m${module_name}\e[0m library at: $module_path"
     return 3
   fi
