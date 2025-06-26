@@ -1,18 +1,3 @@
-# bash-lib Manual
-
-A comprehensive bash library providing modular utilities for common shell operations.
-
-## Table of Contents
-
-- [Compressions](#compressions)
-- [Date](#date)
-- [Directory](#directory)
-- [Http](#http)
-- [Math](#math)
-- [Permissions](#permissions)
-- [System](#system)
-- [Users](#users)
-- [Utils](#utils)
 
 ## Installation
 
@@ -48,42 +33,6 @@ math.add 5 3
 
 ## Modules
 
-### Compressions
-
-Help function available but failed to execute.
-
-### Date
-
-Help function available but failed to execute.
-
-### Directory
-
-Help function available but failed to execute.
-
-### Http
-
-Help function available but failed to execute.
-
-### Math
-
-Help function available but failed to execute.
-
-### Permissions
-
-Help function available but failed to execute.
-
-### System
-
-Help function available but failed to execute.
-
-### Users
-
-Help function available but failed to execute.
-
-### Utils
-
-Help function available but failed to execute.
-
 
 ## Contributing
 
@@ -100,3 +49,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 *Generated automatically by manual.sh*
+

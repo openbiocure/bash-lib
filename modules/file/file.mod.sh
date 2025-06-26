@@ -4,11 +4,11 @@
 # Provides comprehensive file management and manipulation utilities
 
 # Module import signal using scoped naming
-export BASH_LIB_IMPORTED_file="1"
+export BASH_LIB_IMPORTED_files="1"
 
 # Call import.meta.loaded if the function exists (with error suppression)
 if command -v import.meta.loaded >/dev/null 2>&1; then
-    import.meta.loaded "file" "${BASH__PATH:-/opt/bash-lib}/modules/files/files.mod.sh" "1.0.0" 2>/dev/null || true
+    import.meta.loaded "file" "${BASH__PATH:-/opt/bash-lib}/modules/file/file.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
 import console
@@ -629,36 +629,36 @@ File Module - Comprehensive file management and manipulation utilities
 Available Functions:
   file.create <path> [options]           - Create a new file with optional content
   file.read <path> [options]             - Read file content with various filters
-  file.write <path> <content> [options]  - Write content to files
+  file.write <path> <content> [options]   - Write content to files
   file.list <path> [options]             - List files with filters and sorting
-  file.search <path> <term> [options]    - Search for text in files
-  file.stats <path> [options]            - Get file statistics and information
-  file.copy <source> <dest> [options]    - Copy files with various options
-  file.move <source> <dest>              - Move/rename files
-  file.delete <path> [options]           - Delete files and directories
-  file.help                              - Show this help
+  file.search <path> <term> [options]     - Search for text in files
+  file.stats <path> [options]             - Get file statistics and information
+  file.copy <source> <dest> [options]     - Copy files with various options
+  file.move <source> <dest>               - Move/rename files
+  file.delete <path> [options]            - Delete files and directories
+  file.help                                 - Show this help
 
 Options:
   --content=<text>        - Content to write to file (file.create)
-  --executable, -x        - Make file executable (file.create)
-  --overwrite, -f         - Overwrite existing file (file.create, file.write)
-  --append, -a            - Append content instead of overwrite (file.write)
-  --lines=<n>             - Show only first N lines (file.read)
-  --tail=<n>              - Show only last N lines (file.read)
-  --grep=<pattern>        - Filter lines matching pattern (file.read)
-  --line-numbers, -n      - Show line numbers (file.read)
-  --pattern=<glob>        - Filter files by pattern (file.list, file.search)
-  --size=<filter>         - Filter by size (e.g., +1M, -100k) (file.list)
-  --modified=<days>       - Filter by modification time (e.g., +7d, -1d) (file.list)
-  --max=<n>               - Maximum number of results (file.list, file.search)
-  --sort=<field>          - Sort by name, size, or date (file.list)
-  --reverse, -r           - Reverse sort order (file.list)
-  --details, -l           - Show detailed information (file.list)
-  --case-insensitive, -i  - Case-insensitive search (file.search)
-  --context, -C           - Show context around matches (file.search)
-  --summary, -s           - Show summary statistics (file.stats)
-  --preserve, -p          - Preserve attributes when copying (file.copy)
-  --recursive, -r         - Recursive operation (file.delete)
+  --executable, -x         - Make file executable (file.create)
+  --overwrite, -f          - Overwrite existing file (file.create, file.write)
+  --append, -a             - Append content instead of overwrite (file.write)
+  --lines=<n>              - Show only first N lines (file.read)
+  --tail=<n>               - Show only last N lines (file.read)
+  --grep=<pattern>         - Filter lines matching pattern (file.read)
+  --line-numbers, -n       - Show line numbers (file.read)
+  --pattern=<glob>         - Filter files by pattern (file.list, file.search)
+  --size=<filter>          - Filter by size (e.g., +1M, -100k) (file.list)
+  --modified=<days>         - Filter by modification time (e.g., +7d, -1d) (file.list)
+  --max=<n>                - Maximum number of results (file.list, file.search)
+  --sort=<field>           - Sort by name, size, or date (file.list)
+  --reverse, -r            - Reverse sort order (file.list)
+  --details, -l            - Show detailed information (file.list)
+  --case-insensitive, -i   - Case-insensitive search (file.search)
+  --context, -C            - Show context around matches (file.search)
+  --summary, -s            - Show summary statistics (file.stats)
+  --preserve, -p           - Preserve attributes when copying (file.copy)
+  --recursive, -r          - Recursive operation (file.delete)
 
 Examples:
   file.create "config.json" --content='{"key":"value"}'

@@ -4,11 +4,11 @@
 # Provides user-friendly file and directory permission management
 
 # Module import signal using scoped naming
-export BASH_LIB_IMPORTED_permissions="1"
+export BASH_LIB_IMPORTED_permission="1"
 
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
-    import.meta.loaded "permissions" "${BASH__PATH:-/opt/bash-lib}/modules/permissions/permissions.mod.sh" "1.0.0" 2>/dev/null || true
+    import.meta.loaded "permission" "${BASH__PATH:-/opt/bash-lib}/modules/permission/permission.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
 import console
@@ -50,10 +50,10 @@ PERM_SYMBOLIC_EXECUTE="x"
 ##
 ## (Usage) Set file permissions using numeric mode
 ## Examples:
-##   permissions.set /path/to/file 644
-##   permissions.set /path/to/file $PERM_SHARED_READ
+##   permission.set /path/to/file 644
+##   permission.set /path/to/file $PERM_SHARED_READ
 ##
-function permissions.set() {
+function permission.set() {
     local path="$1"
     local mode="$2"
     
@@ -83,10 +83,10 @@ function permissions.set() {
 ##
 ## (Usage) Set file permissions using symbolic mode
 ## Examples:
-##   permissions.set_symbolic /path/to/file u+rw,g+r,o+r
-##   permissions.set_symbolic /path/to/file a+x
+##   permission.set_symbolic /path/to/file u+rw,g+r,o+r
+##   permission.set_symbolic /path/to/file a+x
 ##
-function permissions.set_symbolic() {
+function permission.set_symbolic() {
     local path="$1"
     local mode="$2"
     
@@ -116,10 +116,10 @@ function permissions.set_symbolic() {
 ##
 ## (Usage) Set ownership of files/directories
 ## Examples:
-##   permissions.own /path/to/file user:group
-##   permissions.own /path/to/file user
+##   permission.own /path/to/file user:group
+##   permission.own /path/to/file user
 ##
-function permissions.own() {
+function permission.own() {
     local path="$1"
     local ownership="$2"
     
@@ -149,9 +149,9 @@ function permissions.own() {
 ##
 ## (Usage) Get current permissions of a file/directory
 ## Examples:
-##   permissions.get /path/to/file
+##   permission.get /path/to/file
 ##
-function permissions.get() {
+function permission.get() {
     local path="$1"
     
     if [[ -z "$path" ]]; then
@@ -179,10 +179,10 @@ function permissions.get() {
 ##
 ## (Usage) Set recursive permissions on directories
 ## Examples:
-##   permissions.set_recursive /path/to/dir 755
-##   permissions.set_recursive /path/to/dir $PERM_SHARED_EXEC
+##   permission.set_recursive /path/to/dir 755
+##   permission.set_recursive /path/to/dir $PERM_SHARED_EXEC
 ##
-function permissions.set_recursive() {
+function permission.set_recursive() {
     local path="$1"
     local mode="$2"
     
@@ -212,9 +212,9 @@ function permissions.set_recursive() {
 ##
 ## (Usage) Set recursive ownership on directories
 ## Examples:
-##   permissions.own_recursive /path/to/dir user:group
+##   permission.own_recursive /path/to/dir user:group
 ##
-function permissions.own_recursive() {
+function permission.own_recursive() {
     local path="$1"
     local ownership="$2"
     
@@ -244,9 +244,9 @@ function permissions.own_recursive() {
 ##
 ## (Usage) Make a file executable
 ## Examples:
-##   permissions.make_executable /path/to/script
+##   permission.make_executable /path/to/script
 ##
-function permissions.make_executable() {
+function permission.make_executable() {
     local path="$1"
     
     if [[ -z "$path" ]]; then
@@ -270,9 +270,9 @@ function permissions.make_executable() {
 ##
 ## (Usage) Set secure permissions (private to owner)
 ## Examples:
-##   permissions.secure /path/to/file
+##   permission.secure /path/to/file
 ##
-function permissions.secure() {
+function permission.secure() {
     local path="$1"
     
     if [[ -z "$path" ]]; then
@@ -286,15 +286,15 @@ function permissions.secure() {
     fi
     
     # Set to owner read/write only
-    permissions.set "$path" "$PERM_PRIVATE"
+    permission.set "$path" "$PERM_PRIVATE"
 }
 
 ##
 ## (Usage) Set public read permissions
 ## Examples:
-##   permissions.public_read /path/to/file
+##   permission.public_read /path/to/file
 ##
-function permissions.public_read() {
+function permission.public_read() {
     local path="$1"
     
     if [[ -z "$path" ]]; then
@@ -308,27 +308,27 @@ function permissions.public_read() {
     fi
     
     # Set to owner read/write, others read
-    permissions.set "$path" "$PERM_SHARED_READ"
+    permission.set "$path" "$PERM_SHARED_READ"
 }
 
 ##
 ## (Usage) Show permissions module help
 ##
-function permissions.help() {
+function permission.help() {
     cat <<EOF
 Permissions Module - File and directory permission management
 
 Available Functions:
-  permissions.set <path> <mode>                    - Set numeric permissions
-  permissions.set_symbolic <path> <mode>           - Set symbolic permissions
-  permissions.own <path> <user:group>              - Set ownership
-  permissions.get <path>                           - Get current permissions
-  permissions.set_recursive <path> <mode>          - Set recursive permissions
-  permissions.own_recursive <path> <user:group>    - Set recursive ownership
-  permissions.make_executable <path>               - Make file executable
-  permissions.secure <path>                        - Set private permissions
-  permissions.public_read <path>                   - Set public read permissions
-  permissions.help                                 - Show this help
+  permission.set <path> <mode>                    - Set numeric permissions
+  permission.set_symbolic <path> <mode>           - Set symbolic permissions
+  permission.own <path> <user:group>              - Set ownership
+  permission.get <path>                           - Get current permissions
+  permission.set_recursive <path> <mode>          - Set recursive permissions
+  permission.own_recursive <path> <user:group>    - Set recursive ownership
+  permission.make_executable <path>               - Make file executable
+  permission.secure <path>                        - Set private permissions
+  permission.public_read <path>                   - Set public read permissions
+  permission.help                                 - Show this help
 
 Permission Constants:
   PERM_PRIVATE=600          # Owner read/write only
@@ -340,14 +340,14 @@ Permission Constants:
   PERM_PUBLIC_EXEC=777      # Everyone read/write/execute
 
 Examples:
-  permissions.set file.txt 644
-  permissions.set file.txt \$PERM_SHARED_READ
-  permissions.set_symbolic file.txt u+rw,g+r,o+r
-  permissions.own file.txt user:group
-  permissions.get file.txt
-  permissions.set_recursive /dir 755
-  permissions.make_executable script.sh
-  permissions.secure secret.txt
-  permissions.public_read public.txt
+  permission.set file.txt 644
+  permission.set file.txt \$PERM_SHARED_READ
+  permission.set_symbolic file.txt u+rw,g+r,o+r
+  permission.own file.txt user:group
+  permission.get file.txt
+  permission.set_recursive /dir 755
+  permission.make_executable script.sh
+  permission.secure secret.txt
+  permission.public_read public.txt
 EOF
 } 

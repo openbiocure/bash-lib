@@ -1,261 +1,125 @@
 #!/bin/bash
 
-# Manual Generator for bash-lib
-# Automatically generates Manual.md from all module help functions
+# Manual Generator for bash-lib (bash-lib only version)
+# Generates Manual.md using only bash-lib modules (no bash built-ins)
 
-set -e
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Initialize bash-lib environment
-export BASH__PATH="$(pwd)"
+# Import required modules
 source core/init.sh
-
-# Function to print colored output
-print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Function to get module name from path
-get_module_name() {
-    local path="$1"
-    basename "$(dirname "$path")"
-}
-
-# Function to capitalize first letter (POSIX compliant)
-capitalize() {
-    local str="$1"
-    local first="${str:0:1}"
-    local rest="${str:1}"
-    echo "$(echo "$first" | tr '[:lower:]' '[:upper:]')$rest"
-}
-
-# Function to check if a module has a help function
-has_help_function() {
-    local module_dir="$1"
-    # Check all .mod.sh files in the module directory
-    while IFS= read -r -d '' file; do
-        if grep -q "function.*\.help()" "$file" 2>/dev/null; then
-            return 0
-        fi
-    done < <(find "$module_dir" -name "*.mod.sh" -print0 2>/dev/null)
-    return 1
-}
-
-# Function to get help function name
-get_help_function() {
-    local module_dir="$1"
-    local module_name=$(basename "$module_dir")
-    
-    # Check all .mod.sh files in the module directory
-    while IFS= read -r -d '' file; do
-        if grep -q "function.*\.help()" "$file" 2>/dev/null; then
-            # Extract the help function name from the file
-            local help_func=$(grep -o "function [^.]*\.help()" "$file" | head -1 | sed 's/function //')
-            if [[ -n "$help_func" ]]; then
-                echo "$help_func"
-                return 0
-            fi
-        fi
-    done < <(find "$module_dir" -name "*.mod.sh" -print0 2>/dev/null)
-    
-    # Fallback to module name
-    echo "${module_name}.help"
-}
-
-# Function to run help function and capture output
-run_help_function() {
-    local module_dir="$1"
-    local help_func=$(get_help_function "$module_dir")
-    
-    # Find the file containing the help function
-    local help_file=""
-    while IFS= read -r -d '' file; do
-        if grep -q "function.*\.help()" "$file" 2>/dev/null; then
-            help_file="$file"
-            break
-        fi
-    done < <(find "$module_dir" -name "*.mod.sh" -print0 2>/dev/null)
-    
-    if [[ -z "$help_file" ]]; then
-        print_warning "No help file found for $module_dir"
-        return 1
-    fi
-    
-    # Source the file and run the help function
-    local output
-    if output=$(bash -c "export BASH__PATH=\"$(pwd)\" && source core/init.sh && source \"$help_file\" && $help_func" 2>&1); then
-        echo "$output"
-    else
-        print_warning "Failed to run $help_func from $help_file"
-        return 1
-    fi
-}
-
-# Function to generate manual content
-generate_manual() {
-    local output_file="$1"
-    
-    # Create header
-    cat > "$output_file" << 'EOF'
-# bash-lib Manual
-
-A comprehensive bash library providing modular utilities for common shell operations.
-
-## Table of Contents
-
-EOF
-
-    # Find all module directories
-    local module_dirs=()
-    while IFS= read -r -d '' dir; do
-        # Skip the top-level modules directory itself
-        [[ "$dir" == "modules" ]] && continue
-        if [[ -d "$dir" ]]; then
-            module_dirs+=("$dir")
-        fi
-    done < <(find modules -mindepth 1 -type d -print0 2>/dev/null)
-
-    # Sort module directories alphabetically
-    IFS=$'\n' module_dirs=($(sort <<<"${module_dirs[*]}"))
-    unset IFS
-
-    # Generate table of contents
-    for module_dir in "${module_dirs[@]}"; do
-        local module_name=$(basename "$module_dir")
-        local module_title=$(capitalize "$module_name")
-        echo "- [$module_title](#$module_name)" >> "$output_file"
-    done
-
-    # Add sections
-    cat >> "$output_file" << 'EOF'
-
-## Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd bash-lib
-
-# Install dependencies
-make install-deps
-
-# Install bash-lib
-make install
-```
-
-## Usage
-
-```bash
-# Source the library
-export BASH__PATH="/path/to/bash-lib"
-source core/init.sh
-
-# Import a module
+import console
+import file
 import directory
-import http
-import math
+import string
+import engine
 
-# Use the functions
-directory.create /tmp/test
-http.get https://api.example.com
-math.add 5 3
-```
+# Set output file
+manual_file="Manual.md"
 
-## Modules
+# Helper: Print status/info/warning/error using console module
+status()   { console.info   "$1"; }
+warning()  { console.warn   "$1"; }
+error()    { console.error "$1"; }
+success()  { console.success "$1"; }
 
-EOF
-
-    # Generate module documentation
-    local module_count=0
-    for module_dir in "${module_dirs[@]}"; do
-        local module_name=$(basename "$module_dir")
-        local module_title=$(capitalize "$module_name")
-        
-        print_status "Processing module: $module_name"
-        
-        # Add module header
-        echo "### $module_title" >> "$output_file"
-        echo "" >> "$output_file"
-        
-        # Check if module has help function
-        if has_help_function "$module_dir"; then
-            print_status "  Found help function for $module_name"
-            
-            # Get help output
-            local help_output
-            if help_output=$(run_help_function "$module_dir" 2>/dev/null); then
-                # Format the help output
-                echo '```bash' >> "$output_file"
-                echo "$help_output" >> "$output_file"
-                echo '```' >> "$output_file"
-            else
-                print_warning "  Failed to get help for $module_name"
-                echo "Help function available but failed to execute." >> "$output_file"
-            fi
-        else
-            print_warning "  No help function found for $module_name"
-            echo "No help function available for this module." >> "$output_file"
-        fi
-        
-        echo "" >> "$output_file"
-        ((module_count++))
-    done
-
-    # Add footer
-    cat >> "$output_file" << 'EOF'
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add your module or improvements
-4. Write tests for your changes
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-*Generated automatically by manual.sh*
-EOF
-
-    print_status "Generated manual with $module_count modules"
+# Helper: Capitalize first letter using string module
+capitalize() {
+    string.upper "${1:0:1}" > /tmp/__cap.tmp
+    string.lower "${1:1}" > /tmp/__rest.tmp
+    file.read /tmp/__cap.tmp > /tmp/__cap2.tmp
+    file.read /tmp/__rest.tmp > /tmp/__rest2.tmp
+    cap=$(file.read /tmp/__cap2.tmp)
+    rest=$(file.read /tmp/__rest2.tmp)
+    file.delete /tmp/__cap.tmp
+    file.delete /tmp/__rest.tmp
+    file.delete /tmp/__cap2.tmp
+    file.delete /tmp/__rest2.tmp
+    console.log "$cap$rest" > /tmp/__final_cap.tmp
+    file.read /tmp/__final_cap.tmp
+    file.delete /tmp/__final_cap.tmp
 }
 
-# Main execution
+# Helper: Append to manual file
+append_manual() {
+    file.write "$manual_file" "$1" --append
+}
+
+# Helper: Create manual file
+create_manual() {
+    file.create "$manual_file" "$1" --overwrite
+}
+
+# Main manual generation logic
 main() {
-    local output_file="Manual.md"
-    
-    print_status "Starting manual generation..."
-    
-    # Check if bash-lib is properly initialized
-    if [[ ! -f "core/init.sh" ]]; then
-        print_error "core/init.sh not found. Please run this script from the bash-lib root directory."
-        exit 1
-    fi
-    
-    # Generate the manual
-    generate_manual "$output_file"
-    
-    print_status "Manual generated successfully: $output_file"
-    print_status "You can now view the manual with: cat $output_file"
+    status "Generating $manual_file using bash-lib only..."
+
+    # Delete existing file and create fresh
+    file.delete "$manual_file" 2>/dev/null || true
+
+    # Header
+    create_manual "# bash-lib Manual\n\nA comprehensive bash library providing modular utilities for common shell operations.\n\n## Table of Contents\n"
+
+    # Get list of modules using engine.modules
+    engine.modules > /tmp/__modules.tmp 2>/dev/null || {
+        error "Failed to get module list from engine.modules"
+        return 1
+    }
+
+    # Extract module names from engine.modules output and build TOC
+    file.read /tmp/__modules.tmp | while read -r line; do
+        # Extract module name from lines like: "25/06/2025 15:30:55 - EPAEDUBW001A - test_engine.sh - [LOG]: file"
+        if [[ "$line" == *" - [LOG]: "* ]]; then
+            local module_name=$(echo "$line" | sed 's/.* - \[LOG\]: //')
+            if [[ -n "$module_name" ]]; then
+                local module_title=$(capitalize "$module_name")
+                append_manual "- [${module_title}](#${module_name})\n"
+                status "  Added to TOC: $module_name"
+            fi
+        fi
+    done
+    file.delete /tmp/__modules.tmp
+
+    append_manual "\n## Installation\n\n\`\`\`bash\n# Clone the repository\ngit clone <repository-url>\ncd bash-lib\n\n# Install dependencies\nmake install-deps\n\n# Install bash-lib\nmake install\n\`\`\`\n\n## Usage\n\n\`\`\`bash\n# Source the library\nexport BASH__PATH=\"/path/to/bash-lib\"\nsource core/init.sh\n\n# Import a module\nimport directory\nimport http\nimport math\n\n# Use the functions\ndirectory.create /tmp/test\nhttp.get https://api.example.com\nmath.add 5 3\n\`\`\`\n\n## Modules\n"
+
+    # Get modules again for documentation
+    engine.modules > /tmp/__modules2.tmp 2>/dev/null
+
+    # For each module, add section
+    file.read /tmp/__modules2.tmp | while read -r line; do
+        if [[ "$line" == *" - [LOG]: "* ]]; then
+            local module_name=$(echo "$line" | sed 's/.* - \[LOG\]: //')
+            if [[ -n "$module_name" ]]; then
+                local module_title=$(capitalize "$module_name")
+                append_manual "\n### $module_title\n\n"
+                
+                status "  Processing module: $module_name"
+                
+                # Get help content by importing module and calling help function
+                if import "$module_name" 2>/dev/null; then
+                    local help_func="${module_name}.help"
+                    if type "$help_func" >/dev/null 2>&1; then
+                        append_manual '\`\`\`bash\n'
+                        "$help_func" > /tmp/__help.tmp 2>/dev/null || echo "Help function failed to execute" > /tmp/__help.tmp
+                        file.read /tmp/__help.tmp | while read -r help_line; do
+                            append_manual "$help_line\n"
+                        done
+                        append_manual '\`\`\`\n'
+                        file.delete /tmp/__help.tmp
+                        status "  Added help content for: $module_name"
+                    else
+                        warning "  No help function found for $module_name"
+                        append_manual "No help function available for this module.\n"
+                    fi
+                else
+                    warning "  Failed to import module $module_name"
+                    append_manual "Failed to import module.\n"
+                fi
+            fi
+        fi
+    done
+    file.delete /tmp/__modules2.tmp
+
+    append_manual "\n## Contributing\n\n1. Fork the repository\n2. Create a feature branch\n3. Add your module or improvements\n4. Write tests for your changes\n5. Submit a pull request\n\n## License\n\nThis project is licensed under the MIT License - see the LICENSE file for details.\n\n---\n\n*Generated automatically by manual.sh*\n"
+
+    success "Manual generated successfully: $manual_file"
 }
 
-# Run main function
 main "$@" 

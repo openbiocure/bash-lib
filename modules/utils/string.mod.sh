@@ -48,7 +48,7 @@ function string.length() {
 #
 function string.lower() {
     local str="$1"
-    echo "${str,,}"
+    echo "$str" | tr '[:upper:]' '[:lower:]'
 }
 
 #
@@ -57,7 +57,7 @@ function string.lower() {
 #
 function string.upper() {
     local str="$1"
-    echo "${str^^}"
+    echo "$str" | tr '[:lower:]' '[:upper:]'
 }
 
 #
@@ -100,6 +100,15 @@ function string.endswith() {
     [[ "$str" == *"$suffix" ]] && echo true || echo false
 }
 
+#
+# (Usage)
+#   Get the basename of a path (filename without directory)
+#
+function string.basename() {
+    local path="$1"
+    echo "${path##*/}"
+}
+
 ##
 ## (Usage) Show string module help
 ##
@@ -117,6 +126,7 @@ Available Functions:
   string.contains <str> <substr>       - Check if string contains substring
   string.startswith <str> <prefix>     - Check if string starts with prefix
   string.endswith <str> <suffix>       - Check if string ends with suffix
+  string.basename <path>                - Get the basename of a path
   string.help                          - Show this help
 
 Examples:
@@ -129,5 +139,6 @@ Examples:
   string.startswith "foobar" "foo"      # Returns true
   string.endswith "foobar" "bar"        # Returns true
   string.replace "a" "b" "cat"         # Returns cbt
+  string.basename "/path/to/file.txt"  # Returns file.txt
 EOF
 }

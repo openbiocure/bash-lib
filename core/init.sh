@@ -56,8 +56,47 @@ function import.force() {
   local check_var="BASH_LIB_IMPORTED_${module_name//\//_}"
   unset "$check_var" 2>/dev/null || true
   
-  # Now import normally (which will reload since signal is cleared)
-  import "$module_name" "$extension"
+  # Handle special cases for modules in subdirectories
+  local module_path=""
+  case "$module_name" in
+    "console")
+      module_path="${BASH__PATH}/modules/system/console.mod.sh"
+      ;;
+    "trapper")
+      module_path="${BASH__PATH}/modules/system/trapper.mod.sh"
+      ;;
+    "engine")
+      module_path="${BASH__PATH}/modules/core/engine.mod.sh"
+      ;;
+    "colors")
+      module_path="${BASH__PATH}/config/colors.inc"
+      ;;
+    *)
+      # For other modules, use the import function
+      import "$module_name" "$extension"
+      return $?
+      ;;
+  esac
+  
+  # Source the module directly
+  if [[ -f "$module_path" ]]; then
+    source "$module_path"
+    
+    # Check if module loaded successfully
+    if [[ -n "${!check_var}" ]]; then
+      echo "Module: $module_name, Version: 1.0.0, Loaded from: $module_path"
+      return 0
+    elif command -v "${module_name}.help" >/dev/null 2>&1; then
+      echo "Module: $module_name, Version: 1.0.0, Loaded from: $module_path"
+      return 0
+    else
+      echo -e "\e[31mError:\e[0m Module '$module_name' did not signal a successful load"
+      return 2
+    fi
+  else
+    echo -e "\e[31mError: \e[0mCannot find \e[1m${module_name}\e[0m library at: $module_path"
+    return 3
+  fi
 }
 
 function import.meta.reload() {
@@ -139,9 +178,15 @@ if [[ -z "${BASH__PATH}" ]]; then
     # Get the directory where this script is located
     script_dir=""
     if [[ -n "${BASH_SOURCE[0]}" ]]; then
-        script_dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+        # Use macOS-compatible way to get absolute path
+        if command -v readlink >/dev/null 2>&1 && readlink -f "${BASH_SOURCE[0]}" >/dev/null 2>&1; then
+            script_dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+        else
+            # Fallback for macOS where readlink -f doesn't exist
+            script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+        fi
     else
-        script_dir=$(dirname "$0")
+        script_dir=$(cd "$(dirname "$0")" && pwd)
     fi
     
     # Navigate up to find the bash-lib root (where core/ and modules/ directories exist)
@@ -175,8 +220,8 @@ if [[ -n "${BASH__PATH}" ]] && [[ -d "${BASH__PATH}" ]]; then
     
     # Import core modules with error suppression during initialization
     # Use a more robust approach that doesn't rely on import signals during init
-    if [[ -f "${BASH__PATH}/core/trapper.mod.sh" ]]; then
-        source "${BASH__PATH}/core/trapper.mod.sh" 2>/dev/null || true
+    if [[ -f "${BASH__PATH}/modules/system/trapper.mod.sh" ]]; then
+        source "${BASH__PATH}/modules/system/trapper.mod.sh" 2>/dev/null || true
     fi
     
     if [[ -f "${BASH__PATH}/modules/system/console.mod.sh" ]]; then

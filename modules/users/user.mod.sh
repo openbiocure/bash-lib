@@ -4,11 +4,11 @@
 # Provides comprehensive user and group management utilities
 
 # Module import signal using scoped naming
-export BASH_LIB_IMPORTED_users="1"
+export BASH_LIB_IMPORTED_user="1"
 
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
-    import.meta.loaded "users" "${BASH__PATH:-/opt/bash-lib}/modules/users/users.mod.sh" "1.0.0" 2>/dev/null || true
+    import.meta.loaded "user" "${BASH__PATH:-/opt/bash-lib}/modules/users/user.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
 import console
@@ -31,10 +31,10 @@ USER_TYPE_SERVICE="service"
 ##
 ## (Usage) Create a new user
 ## Examples:
-##   users.create username
-##   users.create username --home=/custom/home --shell=/bin/zsh
+##   user.create username
+##   user.create username --home=/custom/home --shell=/bin/zsh
 ##
-function users.create() {
+function user.create() {
     local username="$1"
     shift
     
@@ -108,10 +108,10 @@ function users.create() {
 ##
 ## (Usage) Delete a user
 ## Examples:
-##   users.delete username
-##   users.delete username --remove-home
+##   user.delete username
+##   user.delete username --remove-home
 ##
-function users.delete() {
+function user.delete() {
     local username="$1"
     shift
     
@@ -164,10 +164,10 @@ function users.delete() {
 ##
 ## (Usage) Create a new group
 ## Examples:
-##   users.create_group groupname
-##   users.create_group groupname --system
+##   user.create_group groupname
+##   user.create_group groupname --system
 ##
-function users.create_group() {
+function user.create_group() {
     local groupname="$1"
     shift
     
@@ -214,9 +214,9 @@ function users.create_group() {
 ##
 ## (Usage) Delete a group
 ## Examples:
-##   users.delete_group groupname
+##   user.delete_group groupname
 ##
-function users.delete_group() {
+function user.delete_group() {
     local groupname="$1"
     
     if [[ -z "$groupname" ]]; then
@@ -243,9 +243,9 @@ function users.delete_group() {
 ##
 ## (Usage) Add user to group
 ## Examples:
-##   users.add_to_group username groupname
+##   user.add_to_group username groupname
 ##
-function users.add_to_group() {
+function user.add_to_group() {
     local username="$1"
     local groupname="$2"
     
@@ -284,9 +284,9 @@ function users.add_to_group() {
 ##
 ## (Usage) Remove user from group
 ## Examples:
-##   users.remove_from_group username groupname
+##   user.remove_from_group username groupname
 ##
-function users.remove_from_group() {
+function user.remove_from_group() {
     local username="$1"
     local groupname="$2"
     
@@ -328,10 +328,10 @@ function users.remove_from_group() {
 ##
 ## (Usage) List all users
 ## Examples:
-##   users.list
-##   users.list --system-only
+##   user.list
+##   user.list --system-only
 ##
-function users.list() {
+function user.list() {
     local system_only=false
     local regular_only=false
     
@@ -374,10 +374,10 @@ function users.list() {
 ##
 ## (Usage) List all groups
 ## Examples:
-##   users.list_groups
-##   users.list_groups --system-only
+##   user.list_groups
+##   user.list_groups --system-only
 ##
-function users.list_groups() {
+function user.list_groups() {
     local system_only=false
     local regular_only=false
     
@@ -421,9 +421,9 @@ function users.list_groups() {
 ##
 ## (Usage) Get user information
 ## Examples:
-##   users.info username
+##   user.info username
 ##
-function users.info() {
+function user.info() {
     local username="$1"
     
     if [[ -z "$username" ]]; then
@@ -464,9 +464,9 @@ function users.info() {
 ##
 ## (Usage) Set user password
 ## Examples:
-##   users.set_password username newpassword
+##   user.set_password username newpassword
 ##
-function users.set_password() {
+function user.set_password() {
     local username="$1"
     local password="$2"
     
@@ -499,22 +499,22 @@ function users.set_password() {
 ##
 ## (Usage) Show users module help
 ##
-function users.help() {
+function user.help() {
     cat <<EOF
 Users Module - User and group management utilities
 
 Available Functions:
-  users.create <username> [options]              - Create a new user
-  users.delete <username> [options]              - Delete a user
-  users.create_group <groupname> [options]       - Create a new group
-  users.delete_group <groupname>                 - Delete a group
-  users.add_to_group <username> <groupname>      - Add user to group
-  users.remove_from_group <username> <groupname> - Remove user from group
-  users.list [options]                           - List all users
-  users.list_groups [options]                    - List all groups
-  users.info <username>                          - Get user information
-  users.set_password <username> <password>       - Set user password
-  users.help                                     - Show this help
+  user.create <username> [options]              - Create a new user
+  user.delete <username> [options]              - Delete a user
+  user.create_group <groupname> [options]       - Create a new group
+  user.delete_group <groupname>                 - Delete a group
+  user.add_to_group <username> <groupname>      - Add user to group
+  user.remove_from_group <username> <groupname> - Remove user from group
+  user.list [options]                           - List all users
+  user.list_groups [options]                    - List all groups
+  user.info <username>                          - Get user information
+  user.set_password <username> <password>       - Set user password
+  user.help                                     - Show this help
 
 Create User Options:
   --home=<path>        - Set home directory
@@ -541,11 +541,11 @@ Shell Constants:
   USER_SHELL_FALSE="/bin/false"
 
 Examples:
-  users.create john --home=/home/john --shell=\$USER_SHELL_BASH
-  users.create_group developers
-  users.add_to_group john developers
-  users.list --regular-only
-  users.info john
-  users.set_password john mypassword
+  user.create john --home=/home/john --shell=\$USER_SHELL_BASH
+  user.create_group developers
+  user.add_to_group john developers
+  user.list --regular-only
+  user.info john
+  user.set_password john mypassword
 EOF
 } 
