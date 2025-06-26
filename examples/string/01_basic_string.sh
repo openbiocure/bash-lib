@@ -26,13 +26,26 @@ console.info "Length of '$long_text': $(string.length "$long_text")"
 console.info "Case operations:"
 console.info "Uppercase: $(string.upper "$text")"
 console.info "Lowercase: $(string.lower "$text")"
-console.info "Title case: $(string.title "$text")"
 
 # Trimming
 console.info "Trimming operations:"
 spaced_text="   Hello World   "
 console.info "Original: '$spaced_text'"
 console.info "Trimmed: '$(string.trim "$spaced_text")'"
+
+# String contains
+console.info "String contains operations:"
+console.info "Does '$text' contain 'World'? $(string.contains "$text" "World")"
+console.info "Does '$text' contain 'Python'? $(string.contains "$text" "Python")"
+
+# String starts/ends with
+console.info "String starts/ends with operations:"
+console.info "Does '$text' start with 'Hello'? $(string.startswith "$text" "Hello")"
+console.info "Does '$text' end with 'World'? $(string.endswith "$text" "World")"
+
+# String replace
+console.info "String replace operations:"
+console.info "Replace 'World' with 'Bash': $(string.replace "World" "Bash" "$text")"
 
 echo ""
 echo "=== Basic String Operations Example Complete ==="

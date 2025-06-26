@@ -28,23 +28,25 @@ echo "=== Basic Directory Operations ==="
 console.info "Listing directory contents..."
 directory.list "$test_dir"
 
-# Count files and directories
-console.info "Counting items in directory..."
-file_count=$(directory.countFiles "$test_dir")
-dir_count=$(directory.countDirectories "$test_dir")
-console.info "Files: $file_count, Directories: $dir_count"
+# List with details
+console.info "Listing directory contents with details..."
+directory.list "$test_dir" --long
 
-# Check if directory exists
-console.info "Checking directory existence..."
-if directory.exists "$test_dir"; then
-    console.success "Directory exists: $test_dir"
-else
-    console.error "Directory does not exist: $test_dir"
-fi
+# Get directory information
+console.info "Getting directory information..."
+directory.info "$test_dir"
+
+# Get directory size
+console.info "Getting directory size..."
+directory.size "$test_dir"
+
+# Search for files
+console.info "Searching for .txt files..."
+directory.search "$test_dir" "*.txt"
 
 echo ""
 echo "=== Cleanup ==="
-rm -rf "$test_dir"
+directory.remove "$test_dir" --recursive --force
 console.success "Test directory cleaned up"
 
 echo ""

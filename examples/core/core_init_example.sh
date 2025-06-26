@@ -24,7 +24,7 @@ echo "Importing console module..."
 import console
 
 # Check if module is loaded
-echo "Console module loaded: $(import.meta.loaded console)"
+echo "Console module loaded: $(import.meta.info console)"
 
 # Import multiple modules
 echo ""
@@ -73,9 +73,9 @@ import.force console
 echo ""
 echo "=== Import Status Checking ==="
 
-echo "Is console module loaded? $(import.meta.loaded console)"
-echo "Is http module loaded? $(import.meta.loaded http)"
-echo "Is nonexistent module loaded? $(import.meta.loaded nonexistent)"
+echo "Is console module loaded? $(import.meta.info console)"
+echo "Is http module loaded? $(import.meta.info http)"
+echo "Is nonexistent module loaded? $(import.meta.info nonexistent)"
 
 echo ""
 echo "=== Core Initialization Example Complete ===" 

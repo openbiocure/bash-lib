@@ -22,9 +22,9 @@ console.debug "This is a debug message (only shown if debug is enabled)"
 # Enable debug mode
 echo ""
 echo "=== Debug Mode ==="
-console.debug.enable
+console.set_verbosity debug
 console.debug "This debug message will now be visible"
-console.debug.disable
+console.set_verbosity info
 console.debug "This debug message will be hidden again"
 
 # Colored output
@@ -36,23 +36,20 @@ console.info "Info message"
 console.warn "Warning message"
 console.error "Error message"
 
-# Timestamped logging
+# Verbosity levels
 echo ""
-echo "=== Timestamped Logging ==="
-console.timestamp.enable
-console.log "This message has a timestamp"
-console.info "This info message also has a timestamp"
-console.timestamp.disable
-console.log "This message has no timestamp"
-
-# Log levels
-echo ""
-echo "=== Log Levels ==="
-console.level.set "warn"  # Only show warnings and errors
+echo "=== Verbosity Levels ==="
+console.set_verbosity warn  # Only show warnings and errors
 console.log "This log message will be hidden"
 console.warn "This warning will be shown"
 console.error "This error will be shown"
-console.level.set "info"  # Reset to default
+console.set_verbosity info  # Reset to default
+
+# Get current verbosity
+echo ""
+echo "=== Current Verbosity ==="
+current_verbosity=$(console.get_verbosity)
+console.info "Current verbosity level: $current_verbosity"
 
 echo ""
 echo "=== Basic Console Logging Example Complete ===" 

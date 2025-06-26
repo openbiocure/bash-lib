@@ -22,9 +22,7 @@ echo "Response preview: ${response:0:200}..."
 # GET request with headers
 echo ""
 echo "=== GET Request with Headers ==="
-headers="User-Agent: bash-lib-example
-Accept: application/json"
-response=$(http.get "https://httpbin.org/headers" "$headers")
+response=$(http.get "https://httpbin.org/headers" --header="User-Agent: bash-lib-example" --header="Accept: application/json")
 console.info "Response with custom headers:"
 echo "$response" | head -10
 
@@ -32,15 +30,14 @@ echo "$response" | head -10
 echo ""
 echo "=== POST Request with JSON Data ==="
 json_data='{"name": "John Doe", "email": "john@example.com", "age": 30}'
-response=$(http.post "https://httpbin.org/post" "$json_data" "application/json")
+response=$(http.post "https://httpbin.org/post" --data="$json_data" --header="Content-Type: application/json")
 console.info "POST response:"
 echo "$response" | head -10
 
 # POST request with form data
 echo ""
 echo "=== POST Request with Form Data ==="
-form_data="name=John%20Doe&email=john@example.com&age=30"
-response=$(http.post "https://httpbin.org/post" "$form_data" "application/x-www-form-urlencoded")
+response=$(http.post "https://httpbin.org/post" --data-urlencode="name=John Doe" --data-urlencode="email=john@example.com" --data-urlencode="age=30")
 console.info "Form POST response:"
 echo "$response" | head -10
 
@@ -48,7 +45,7 @@ echo "$response" | head -10
 echo ""
 echo "=== PUT Request ==="
 put_data='{"id": 1, "name": "Jane Doe", "email": "jane@example.com"}'
-response=$(http.put "https://httpbin.org/put" "$put_data" "application/json")
+response=$(http.put "https://httpbin.org/put" --data="$put_data" --header="Content-Type: application/json")
 console.info "PUT response:"
 echo "$response" | head -10
 
@@ -59,20 +56,28 @@ response=$(http.delete "https://httpbin.org/delete")
 console.info "DELETE response:"
 echo "$response" | head -10
 
-# Headers-only request
+# Get headers only
 echo ""
 echo "=== Headers-Only Request ==="
-headers_response=$(http.head "https://httpbin.org/get")
+headers_response=$(http.headers "https://httpbin.org/get")
 console.info "Headers response:"
 echo "$headers_response" | head -10
 
 # Request with query parameters
 echo ""
 echo "=== Request with Query Parameters ==="
-query_params="param1=value1&param2=value2&param3=value3"
-response=$(http.get "https://httpbin.org/get?$query_params")
+response=$(http.get "https://httpbin.org/get?param1=value1&param2=value2&param3=value3")
 console.info "Query parameters response:"
 echo "$response" | head -10
+
+# Check if URL is accessible
+echo ""
+echo "=== URL Accessibility Check ==="
+if http.check "https://httpbin.org/get"; then
+    console.success "URL is accessible"
+else
+    console.error "URL is not accessible"
+fi
 
 echo ""
 echo "=== Basic HTTP Requests Example Complete ===" 
