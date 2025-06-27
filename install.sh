@@ -32,37 +32,58 @@ make_scripts_executable() {
 add_to_shell_profile() {
     # Add to .bashrc for interactive shells
     if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$SHELL_PROFILE"; then
-        echo "source $BASH_LIB_PATH/core/init.sh" >> "$SHELL_PROFILE"
-        echo "export BASH__PATH=$BASH_LIB_PATH" >> "$SHELL_PROFILE"
+        echo "source $BASH_LIB_PATH/core/init.sh" >>"$SHELL_PROFILE"
+        echo "export BASH__PATH=$BASH_LIB_PATH" >>"$SHELL_PROFILE"
     fi
-    
+
     # Add to .bash_profile/.profile for login shells (SSH sessions)
     if [ -n "$BASH_PROFILE" ]; then
         if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$BASH_PROFILE"; then
-            echo "source $BASH_LIB_PATH/core/init.sh" >> "$BASH_PROFILE"
-            echo "export BASH__PATH=$BASH_LIB_PATH" >> "$BASH_PROFILE"
+            echo "source $BASH_LIB_PATH/core/init.sh" >>"$BASH_PROFILE"
+            echo "export BASH__PATH=$BASH_LIB_PATH" >>"$BASH_PROFILE"
         fi
     fi
 }
 
 # Source bash-lib for current session
 source_bash_lib() {
-    source $BASH_LIB_PATH/core/init.sh
+    # Set the BASH__PATH environment variable
     export BASH__PATH=$BASH_LIB_PATH
+
+    # Source the init script to make import function available
+    if [ -f "$BASH_LIB_PATH/core/init.sh" ]; then
+        source "$BASH_LIB_PATH/core/init.sh"
+        echo "bash-lib sourced successfully for current session."
+
+        # Verify that import function is available
+        if command -v import >/dev/null 2>&1; then
+            echo "✅ 'import' function is now available!"
+        else
+            echo "⚠️  Warning: 'import' function not found. Please restart your terminal."
+        fi
+    else
+        echo "❌ Error: Could not find bash-lib init script at $BASH_LIB_PATH/core/init.sh"
+        return 1
+    fi
 }
 
 # Install from local files
 install_from_local() {
     echo "Installing bash-lib from local files..."
-    
+
     if sudo cp -r . $BASH_LIB_PATH/; then
         make_scripts_executable
         add_to_shell_profile
         source_bash_lib
-        
-        echo "bash-lib installed successfully from local files. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
+
+        echo ""
+        echo "✅ bash-lib installed successfully from local files!"
+        echo "📝 The 'import' function is now available in this session."
+        echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+        echo ""
+        echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
     else
-        echo "Failed to copy bash-lib files. Please check if the files exist."
+        echo "❌ Failed to copy bash-lib files. Please check if the files exist."
         return 1
     fi
 }
@@ -70,11 +91,11 @@ install_from_local() {
 # Install from remote repository
 install_from_remote() {
     echo "Installing bash-lib from remote repository..."
-    
+
     # Create temporary directory for download
     TEMP_DIR=$(mktemp -d)
     cd $TEMP_DIR
-    
+
     # Download and extract the zip file
     if curl -sSL -o bash-lib.zip $BASH_LIB_ZIP_URL && unzip -q bash-lib.zip; then
         # Move the extracted content to the target directory
@@ -82,23 +103,28 @@ install_from_remote() {
             make_scripts_executable
             add_to_shell_profile
             source_bash_lib
-            
-            echo "bash-lib installed successfully from remote repository. Please restart your terminal or run 'source $SHELL_PROFILE' to apply changes."
+
+            echo ""
+            echo "✅ bash-lib installed successfully from remote repository!"
+            echo "📝 The 'import' function is now available in this session."
+            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
         else
-            echo "Failed to copy extracted files to $BASH_LIB_PATH"
-            cd - > /dev/null
+            echo "❌ Failed to copy extracted files to $BASH_LIB_PATH"
+            cd - >/dev/null
             rm -rf $TEMP_DIR
             return 1
         fi
     else
-        echo "Failed to download or extract bash-lib. Please check your internet connection and try again."
-        cd - > /dev/null
+        echo "❌ Failed to download or extract bash-lib. Please check your internet connection and try again."
+        cd - >/dev/null
         rm -rf $TEMP_DIR
         return 1
     fi
-    
+
     # Clean up temporary directory
-    cd - > /dev/null
+    cd - >/dev/null
     rm -rf $TEMP_DIR
 }
 
@@ -125,7 +151,7 @@ uninstall() {
     # Remove sourcing from shell profile
     sed -i '/source \/opt\/bash-lib\/core\/init.sh/d' "$SHELL_PROFILE" 2>/dev/null || true
     sed -i '/export BASH__PATH=\/opt\/bash-lib/d' "$SHELL_PROFILE" 2>/dev/null || true
-    
+
     # Remove from .bash_profile/.profile if it exists
     if [ -n "$BASH_PROFILE" ]; then
         sed -i '/source \/opt\/bash-lib\/core\/init.sh/d' "$BASH_PROFILE" 2>/dev/null || true
@@ -154,22 +180,22 @@ show_help() {
 # Main function with switch statement
 main() {
     init_shell_profile
-    
+
     case "${1:-install}" in
-        "install")
-            install
-            ;;
-        "uninstall")
-            uninstall
-            ;;
-        "help"|"-h"|"--help")
-            show_help
-            ;;
-        *)
-            echo "Unknown command: $1"
-            echo "Use '$0 help' for usage information."
-            exit 1
-            ;;
+    "install")
+        install
+        ;;
+    "uninstall")
+        uninstall
+        ;;
+    "help" | "-h" | "--help")
+        show_help
+        ;;
+    *)
+        echo "Unknown command: $1"
+        echo "Use '$0 help' for usage information."
+        exit 1
+        ;;
     esac
 }
 
