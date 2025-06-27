@@ -19,6 +19,7 @@ bash-lib is a modular shell scripting library that provides:
 - [File](#file)
 - [Date](#date)
 - [String](#string)
+- [Foreach](#forEach)
 - [Directory](#directory)
 - [Mathexceptions](#mathExceptions)
 - [Math](#math)
@@ -169,6 +170,51 @@ Examples:
   string.basename "/path/to/file.txt"  # Returns file.txt
 ```
 
+### Foreach
+
+```sh
+forEach Module - Iteration utilities for arrays, files, and collections
+
+Available Functions:
+  forEach.array <var> <callback> [items...] [options]  - Iterate over array items
+  forEach.file <var> <callback> <file> [options]       - Iterate over file lines
+  forEach.command <var> <callback> <command> [options] - Iterate over command output
+  forEach.help                                          - Show this help
+
+Common Options:
+  --parallel=<number>     - Run iterations in parallel (default: 1)
+  --break-on-error        - Stop iteration on first error
+  --continue-on-error     - Continue iteration even if errors occur
+  --silent                - Suppress output from callback function
+  --verbose               - Show detailed execution information
+  --dry-run               - Show what would be executed without running
+
+File-specific Options:
+  --skip-empty            - Skip empty lines
+  --skip-comments         - Skip lines starting with #
+
+Examples:
+  # Array iteration
+  forEach.array "item" "echo $item" "apple" "banana" "cherry"
+  forEach.array "file" "ls -la $file" --parallel=3 *.txt
+  forEach.array "pid" "process.stop $pid" --break-on-error 1234 5678 9012
+
+  # File iteration
+  forEach.file "line" "echo $line" input.txt
+  forEach.file "line" "process.run $line" commands.txt --parallel=5
+  forEach.file "line" "echo $line" config.txt --skip-comments --skip-empty
+
+  # Command output iteration
+  forEach.command "line" "echo $line" "ls -1"
+  forEach.command "pid" "process.stop $pid" "ps aux | grep nginx | awk '{print $2}'"
+  forEach.command "file" "ls -la $file" "find . -name '*.txt'" --parallel=3
+
+  # Advanced examples
+  forEach.command "pid" "process.stop $pid --verbose" "pgrep sleep" --parallel=5
+  forEach.file "line" "echo 'Processing: $line'" urls.txt --dry-run
+  forEach.array "num" "echo $((num * 2))" {1..10} --silent
+```
+
 ### Directory
 
 ```sh
@@ -268,12 +314,31 @@ Available Functions:
   process.find <name>              - Find processes by name
   process.top_cpu [limit]          - Top processes by CPU usage
   process.top_mem [limit]          - Top processes by memory usage
+  process.run <command> [options]  - Run a command with various options
+  process.stop <pid> [options]     - Stop a process gracefully
+  process.abort <pid> [options]    - Abort/kill a process immediately
   process.help                     - Show this help
 
 List Options:
   -l=<number>, --limit=<number>    - Limit number of processes shown
   --no-log                         - Fast output without logging overhead
   --format=<format>                - Output format (compact|table|default)
+
+Run Options:
+  --timeout=<seconds>     - Set timeout in seconds (default: no timeout)
+  --capture-output        - Capture and return command output
+  --retries=<number>      - Number of retry attempts (default: 1)
+  --dry-run              - Show what would be executed without running
+  --silent               - Suppress command output (except errors)
+  --verbose              - Show detailed execution information
+
+Stop Options:
+  --timeout=<seconds>     - Wait timeout before force kill (default: 10)
+  --force                 - Force kill immediately (SIGKILL)
+  --verbose               - Show detailed execution information
+
+Abort Options:
+  --verbose               - Show detailed execution information
 
 Examples:
   process.list                     # List all processes
@@ -283,6 +348,18 @@ Examples:
   process.find ssh                 # Find SSH processes
   process.top_cpu 5                # Top 5 CPU-intensive processes
   process.top_mem 10               # Top 10 memory-intensive processes
+  process.run "apt-get update" --timeout=300
+  process.run "docker build ." --capture-output
+  process.run "curl example.com" --retries=3
+  process.run "rm -rf /tmp/*" --dry-run
+  process.run "ls -la" --silent
+  process.run "echo 'test'" --verbose
+  process.stop 1234                # Stop process gracefully
+  process.stop 1234 --timeout=30   # Wait 30 seconds before force kill
+  process.stop 1234 --force        # Force kill immediately
+  process.stop 1234 --verbose      # Show detailed information
+  process.abort 1234               # Kill process immediately
+  process.abort 1234 --verbose     # Show detailed information
 ```
 
 ### Console

@@ -34,13 +34,13 @@ PERM_OTHERS_EXECUTE=1
 PERM_OTHERS_ALL=7
 
 # Common permission combinations
-PERM_PRIVATE=600          # Owner read/write only
-PERM_PRIVATE_EXEC=700     # Owner read/write/execute only
-PERM_SHARED_READ=644      # Owner read/write, group/others read
-PERM_SHARED_EXEC=755      # Owner read/write/execute, group/others read/execute
-PERM_PUBLIC_READ=444      # Everyone read only
-PERM_PUBLIC_WRITE=666     # Everyone read/write
-PERM_PUBLIC_EXEC=777      # Everyone read/write/execute
+PERM_PRIVATE=600      # Owner read/write only
+PERM_PRIVATE_EXEC=700 # Owner read/write/execute only
+PERM_SHARED_READ=644  # Owner read/write, group/others read
+PERM_SHARED_EXEC=755  # Owner read/write/execute, group/others read/execute
+PERM_PUBLIC_READ=444  # Everyone read only
+PERM_PUBLIC_WRITE=666 # Everyone read/write
+PERM_PUBLIC_EXEC=777  # Everyone read/write/execute
 
 # Symbolic permission constants
 PERM_SYMBOLIC_READ="r"
@@ -56,27 +56,27 @@ PERM_SYMBOLIC_EXECUTE="x"
 function permission.set() {
     local path="$1"
     local mode="$2"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ -z "$mode" ]]; then
         console.error "Permission mode is required"
         return 1
     fi
-    
+
     if [[ ! -e "$path" ]]; then
         console.error "Path does not exist: $path"
         return 1
     fi
-    
+
     chmod "$mode" "$path" || {
         console.error "Failed to set permissions on $path"
         return 1
     }
-    
+
     console.success "Set permissions $mode on $path"
 }
 
@@ -89,27 +89,27 @@ function permission.set() {
 function permission.set_symbolic() {
     local path="$1"
     local mode="$2"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ -z "$mode" ]]; then
         console.error "Symbolic permission mode is required"
         return 1
     fi
-    
+
     if [[ ! -e "$path" ]]; then
         console.error "Path does not exist: $path"
         return 1
     fi
-    
+
     chmod "$mode" "$path" || {
         console.error "Failed to set symbolic permissions on $path"
         return 1
     }
-    
+
     console.success "Set symbolic permissions $mode on $path"
 }
 
@@ -122,27 +122,27 @@ function permission.set_symbolic() {
 function permission.own() {
     local path="$1"
     local ownership="$2"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ -z "$ownership" ]]; then
         console.error "Ownership (user:group or user) is required"
         return 1
     fi
-    
+
     if [[ ! -e "$path" ]]; then
         console.error "Path does not exist: $path"
         return 1
     fi
-    
+
     chown "$ownership" "$path" || {
         console.error "Failed to set ownership on $path"
         return 1
     }
-    
+
     console.success "Set ownership $ownership on $path"
 }
 
@@ -153,26 +153,26 @@ function permission.own() {
 ##
 function permission.get() {
     local path="$1"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ ! -e "$path" ]]; then
         console.error "Path does not exist: $path"
         return 1
     fi
-    
+
     local numeric_mode=$(stat -c "%a" "$path" 2>/dev/null || stat -f "%Lp" "$path" 2>/dev/null)
     local symbolic_mode=$(stat -c "%A" "$path" 2>/dev/null || ls -ld "$path" | cut -c2-10)
     local owner=$(stat -c "%U:%G" "$path" 2>/dev/null || stat -f "%Su:%Sg" "$path" 2>/dev/null)
-    
+
     console.info "Permissions for $path:"
     console.info "  Numeric: $numeric_mode"
     console.info "  Symbolic: $symbolic_mode"
     console.info "  Owner: $owner"
-    
+
     echo "$numeric_mode"
 }
 
@@ -185,27 +185,27 @@ function permission.get() {
 function permission.set_recursive() {
     local path="$1"
     local mode="$2"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ -z "$mode" ]]; then
         console.error "Permission mode is required"
         return 1
     fi
-    
+
     if [[ ! -d "$path" ]]; then
         console.error "Path is not a directory: $path"
         return 1
     fi
-    
+
     chmod -R "$mode" "$path" || {
         console.error "Failed to set recursive permissions on $path"
         return 1
     }
-    
+
     console.success "Set recursive permissions $mode on $path"
 }
 
@@ -217,27 +217,27 @@ function permission.set_recursive() {
 function permission.own_recursive() {
     local path="$1"
     local ownership="$2"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ -z "$ownership" ]]; then
         console.error "Ownership (user:group or user) is required"
         return 1
     fi
-    
+
     if [[ ! -d "$path" ]]; then
         console.error "Path is not a directory: $path"
         return 1
     fi
-    
+
     chown -R "$ownership" "$path" || {
         console.error "Failed to set recursive ownership on $path"
         return 1
     }
-    
+
     console.success "Set recursive ownership $ownership on $path"
 }
 
@@ -248,22 +248,22 @@ function permission.own_recursive() {
 ##
 function permission.make_executable() {
     local path="$1"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ ! -e "$path" ]]; then
         console.error "Path does not exist: $path"
         return 1
     fi
-    
+
     chmod +x "$path" || {
         console.error "Failed to make $path executable"
         return 1
     }
-    
+
     console.success "Made $path executable"
 }
 
@@ -274,17 +274,17 @@ function permission.make_executable() {
 ##
 function permission.secure() {
     local path="$1"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ ! -e "$path" ]]; then
         console.error "Path does not exist: $path"
         return 1
     fi
-    
+
     # Set to owner read/write only
     permission.set "$path" "$PERM_PRIVATE"
 }
@@ -296,19 +296,97 @@ function permission.secure() {
 ##
 function permission.public_read() {
     local path="$1"
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ ! -e "$path" ]]; then
         console.error "Path does not exist: $path"
         return 1
     fi
-    
+
     # Set to owner read/write, others read
     permission.set "$path" "$PERM_SHARED_READ"
+}
+
+##
+## (Usage) Check if a path is writable by current user
+## Examples:
+##   permission.check_write /path/to/file
+##   permission.check_write /path/to/directory
+##
+function permission.check_write() {
+    local path="$1"
+
+    if [[ -z "$path" ]]; then
+        console.error "Path is required"
+        return 1
+    fi
+
+    if [[ ! -e "$path" ]]; then
+        console.error "Path does not exist: $path"
+        return 1
+    fi
+
+    if [[ -w "$path" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+##
+## (Usage) Check if a path is readable by current user
+## Examples:
+##   permission.check_read /path/to/file
+##   permission.check_read /path/to/directory
+##
+function permission.check_read() {
+    local path="$1"
+
+    if [[ -z "$path" ]]; then
+        console.error "Path is required"
+        return 1
+    fi
+
+    if [[ ! -e "$path" ]]; then
+        console.error "Path does not exist: $path"
+        return 1
+    fi
+
+    if [[ -r "$path" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+##
+## (Usage) Check if a path is executable by current user
+## Examples:
+##   permission.check_execute /path/to/file
+##   permission.check_execute /path/to/directory
+##
+function permission.check_execute() {
+    local path="$1"
+
+    if [[ -z "$path" ]]; then
+        console.error "Path is required"
+        return 1
+    fi
+
+    if [[ ! -e "$path" ]]; then
+        console.error "Path does not exist: $path"
+        return 1
+    fi
+
+    if [[ -x "$path" ]]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 ##
@@ -328,6 +406,9 @@ Available Functions:
   permission.make_executable <path>               - Make file executable
   permission.secure <path>                        - Set private permissions
   permission.public_read <path>                   - Set public read permissions
+  permission.check_write <path>                   - Check if a path is writable
+  permission.check_read <path>                    - Check if a path is readable
+  permission.check_execute <path>                 - Check if a path is executable
   permission.help                                 - Show this help
 
 Permission Constants:
@@ -349,5 +430,8 @@ Examples:
   permission.make_executable script.sh
   permission.secure secret.txt
   permission.public_read public.txt
+  permission.check_write /path/to/file
+  permission.check_read /path/to/directory
+  permission.check_execute /path/to/file
 EOF
-} 
+}
