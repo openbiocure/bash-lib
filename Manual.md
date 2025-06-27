@@ -17,12 +17,16 @@ bash-lib is a modular shell scripting library that provides:
 - [Logo](#logo)
 - [Engine](#engine)
 - [File](#file)
+- [Firewall](#firewall)
 - [Date](#date)
+- [Network](#network)
 - [String](#string)
 - [Foreach](#forEach)
+- [Xml](#xml)
 - [Directory](#directory)
 - [Mathexceptions](#mathExceptions)
 - [Math](#math)
+- [Service](#service)
 - [Process](#process)
 - [Console](#console)
 - [Trapper](#trapper)
@@ -89,7 +93,13 @@ Available Functions:
   file.copy <source> <dest> [options]     - Copy files with various options
   file.move <source> <dest>               - Move/rename files
   file.delete <path> [options]            - Delete files and directories
-  file.help                                 - Show this help
+  file.exists <path>                      - Check if file exists
+  file.existsOrBreak <path> [message]     - Check if file exists, exit if not
+  file.isReadable <path>                  - Check if file is readable
+  file.isWritable <path>                  - Check if file is writable
+  file.isExecutable <path>                - Check if file is executable
+  file.validate <path> [options]          - Validate file with multiple checks
+  file.help                               - Show this help
 
 Options:
   --content=<text>        - Content to write to file (file.create)
@@ -113,6 +123,14 @@ Options:
   --preserve, -p           - Preserve attributes when copying (file.copy)
   --recursive, -r          - Recursive operation (file.delete)
 
+Validation Options (file.validate):
+  --exists                 - Check if file exists
+  --readable               - Check if file is readable
+  --writable               - Check if file is writable
+  --executable             - Check if file is executable
+  --not-empty              - Check if file is not empty
+  --break-on-error         - Exit on first error (default: continue)
+
 Examples:
   file.create "config.json" --content='{"key":"value"}'
   file.read "log.txt" --lines=10 --grep="ERROR"
@@ -123,6 +141,59 @@ Examples:
   file.copy "*.txt" "/backup/" --pattern
   file.move "old.txt" "new.txt"
   file.delete "temp_*.tmp" --pattern
+  file.exists "config.txt" && echo "File exists"
+  file.existsOrBreak "data.json" "Configuration file is required"
+  file.validate "log.txt" --exists --writable --not-empty
+  file.validate "script.sh" --exists --executable --break-on-error
+```
+
+### Firewall
+
+```sh
+Firewall Module - Unified firewall management across different backends
+
+Available Functions:
+  firewall.detect_backend [options]      - Detect and set firewall backend
+  firewall.get_backend                   - Get current firewall backend
+  firewall.is_running                    - Check if firewall service is running
+  firewall.start [options]               - Start firewall service
+  firewall.stop [options]                - Stop firewall service
+  firewall.status [options]              - Get firewall status
+  firewall.allow_port <port> [options]   - Allow port through firewall
+  firewall.deny_port <port> [options]    - Deny port through firewall
+  firewall.allow_ip <ip> [options]       - Allow IP address through firewall
+  firewall.deny_ip <ip> [options]        - Deny IP address through firewall
+  firewall.list_rules [options]          - List firewall rules
+  firewall.remove_rule <description>     - Remove firewall rule
+  firewall.reset [options]               - Reset firewall to default state
+  firewall.help                          - Show this help
+
+Supported Backends:
+  firewalld  - Red Hat/CentOS firewall daemon
+  ufw        - Ubuntu/Debian uncomplicated firewall
+  iptables   - Linux netfilter firewall
+
+Options:
+  --prefer=<backend>     - Prefer specific backend (detect_backend)
+  --enable               - Enable service on boot (start)
+  --disable              - Disable service on boot (stop)
+  --verbose, -v          - Verbose output (status)
+  --protocol=<proto>     - Protocol (tcp|udp) (allow_port, deny_port)
+  --zone=<zone>          - Firewall zone (firewalld only)
+  --source=<ip>          - Source IP address
+  --description=<text>   - Rule description
+  --format=<format>      - Output format (table|json|verbose)
+  --confirm              - Confirm destructive operations (reset)
+
+Examples:
+  firewall.detect_backend --prefer=firewalld
+  firewall.start --enable
+  firewall.allow_port 80 --protocol=tcp --zone=public
+  firewall.allow_ip 192.168.1.100 --zone=trusted
+  firewall.deny_port 22 --source=10.0.0.0/24
+  firewall.list_rules --zone=public --format=table
+  firewall.status --verbose
+  firewall.reset --confirm
 ```
 
 ### Date
@@ -137,6 +208,31 @@ Available Functions:
 Examples:
   date.now                    # Get current date/time
   current_time=$(date.now)    # Store in variable
+```
+
+### Network
+
+```sh
+Network Module - Network utilities with concise naming
+
+Available Functions:
+  network.port_in_use <port>                    - Check if port is in use
+  network.port_open <host> <port>               - Check if port is open on host
+  network.can_bind <port>                       - Test if we can bind to port
+  network.ensure_free <port> [service_name]     - Ensure port is free (exit if not)
+  network.wait_for_port <host> <port> [timeout] [service_name] - Wait for port to be available
+  network.local_ip                              - Get local IP address
+  network.ping <host>                           - Check if host is reachable
+  network.help                                  - Show this help
+
+Examples:
+  network.port_in_use 8080                      # Check if port 8080 is in use
+  network.port_open "localhost" 8080            # Check if port 8080 is open on localhost
+  network.can_bind 10000                        # Test if we can bind to port 10000
+  network.ensure_free 8080 "Web Server"         # Ensure port 8080 is free for web server
+  network.wait_for_port "db.example.com" 5432 60 "PostgreSQL"  # Wait for PostgreSQL
+  local_ip=$(network.local_ip)                 # Get local IP address
+  network.ping "google.com"                     # Check if google.com is reachable
 ```
 
 ### String
@@ -155,6 +251,7 @@ Available Functions:
   string.startswith <str> <prefix>     - Check if string starts with prefix
   string.endswith <str> <suffix>       - Check if string ends with suffix
   string.basename <path>                - Get the basename of a path
+  string.render <template>               - Render a template string or file
   string.help                          - Show this help
 
 Examples:
@@ -168,6 +265,11 @@ Examples:
   string.endswith "foobar" "bar"        # Returns true
   string.replace "a" "b" "cat"         # Returns cbt
   string.basename "/path/to/file.txt"  # Returns file.txt
+  string.render "Hello mohammad_shehab"
+  string.render --file template.txt
+  string.render --file template.txt --out output.txt
+  string.render --strict "Hello "
+  string.render --strict --file template.txt
 ```
 
 ### Foreach
@@ -213,6 +315,46 @@ Examples:
   forEach.command "pid" "process.stop $pid --verbose" "pgrep sleep" --parallel=5
   forEach.file "line" "echo 'Processing: $line'" urls.txt --dry-run
   forEach.array "num" "echo $((num * 2))" {1..10} --silent
+```
+
+### Xml
+
+```sh
+XML Module - XML parsing, validation, and manipulation utilities
+
+Available Functions:
+  xml.get_value <file> <path> [options]        - Extract value from XML
+  xml.set_value <file> <path> <value> [opts]   - Set value in XML
+  xml.validate <file> [options]                - Validate XML structure
+  xml.get_properties <file> [options]          - Get all properties
+  xml.contains <file> <path> [value]           - Check if XML contains value
+  xml.create <file> <root> [options]           - Create XML file
+  xml.add_property <file> <name> <value> [opts] - Add property to XML
+  xml.help                                     - Show this help
+
+Options:
+  --property, -p           - Treat path as property name (Hive-style XML)
+  --default=<value>        - Default value if not found
+  --silent, -s             - Suppress error messages
+  --create, -c             - Create property if missing
+  --overwrite, -f          - Overwrite existing property
+  --description=<text>     - Add description to property
+  --pattern=<regex>        - Filter properties by pattern
+  --format=<format>        - Output format (key-value|json|text)
+  --schema=<file>          - Validate against XML schema
+  --strict, -s             - Strict validation mode
+  --root-attributes=<attr> - Root element attributes
+  --encoding=<encoding>    - XML encoding (default: UTF-8)
+
+Examples:
+  xml.get_value config.xml "//property[name='hive.server2.port']/value"
+  xml.get_value config.xml "hive.server2.port" --property
+  xml.set_value config.xml "hive.server2.port" "10000" --property
+  xml.validate config.xml --schema=schema.xsd
+  xml.get_properties config.xml --pattern="hive.*" --format=json
+  xml.contains config.xml "hive.server2.port" "10000"
+  xml.create config.xml "configuration" --root-attributes="version='1.0'"
+  xml.add_property config.xml "hive.server2.port" "10000" --description="Server port"
 ```
 
 ### Directory
@@ -301,6 +443,82 @@ Examples:
   math.add 5 3                       # Returns 8
   math.add 10 20                     # Returns 30
   result=$(math.add 15 25)          # Store result in variable
+```
+
+### Service
+
+```sh
+Service Management Module
+
+Functions:
+  service.start <service_name> <command> [options]
+    Start a service with health monitoring
+    Options:
+      --timeout <seconds>     Health check timeout (default: 30)
+      --retry-interval <sec>  Retry interval for health checks (default: 2)
+      --health-check <cmd>    Custom health check command
+      --port <port>          Port to check for service readiness
+      --url <url>            URL to check for service readiness
+      --dry-run              Show what would be done without executing
+      --verbose              Enable verbose output
+
+  service.wait_for_ready <service_name> [options]
+    Wait for a service to become ready
+    Options:
+      --timeout <seconds>     Timeout for readiness check
+      --retry-interval <sec>  Retry interval
+      --health-check <cmd>    Custom health check command
+      --port <port>          Port to check
+      --url <url>            URL to check
+      --verbose <bool>        Enable verbose output
+
+  service.health <service_name> [options]
+    Check service health
+    Options:
+      --health-check <cmd>    Custom health check command
+      --port <port>          Port to check
+      --url <url>            URL to check
+      --verbose              Enable verbose output
+
+  service.is_running <service_name>
+    Check if a service is currently running
+
+  service.stop <service_name> [options]
+    Stop a service
+    Options:
+      --force                Force stop (kill -9)
+      --timeout <seconds>    Graceful stop timeout (default: 10)
+      --verbose              Enable verbose output
+
+  service.list [options]
+    List all tracked services
+    Options:
+      --verbose              Show detailed information
+
+  service.info <service_name>
+    Show detailed information about a service
+
+  service.help
+    Show this help message
+
+Examples:
+  # Start a web service
+  service.start web_server "python -m http.server 8080" --port 8080 --timeout 60
+
+  # Start with custom health check
+  service.start api_server "node server.js" --health-check "curl -f http://localhost:3000/health" --timeout 30
+
+  # Wait for service to be ready
+  service.wait_for_ready web_server --port 8080
+
+  # Check service health
+  service.health web_server --port 8080 --verbose
+
+  # Stop service gracefully
+  service.stop web_server --timeout 15
+
+  # List all services
+  service.list --verbose
 ```
 
 ### Process
@@ -579,6 +797,9 @@ Available Functions:
   permission.make_executable <path>               - Make file executable
   permission.secure <path>                        - Set private permissions
   permission.public_read <path>                   - Set public read permissions
+  permission.check_write <path>                   - Check if a path is writable
+  permission.check_read <path>                    - Check if a path is readable
+  permission.check_execute <path>                 - Check if a path is executable
   permission.help                                 - Show this help
 
 Permission Constants:
@@ -600,6 +821,9 @@ Examples:
   permission.make_executable script.sh
   permission.secure secret.txt
   permission.public_read public.txt
+  permission.check_write /path/to/file
+  permission.check_read /path/to/directory
+  permission.check_execute /path/to/file
 ```
 
 ## Contributing
