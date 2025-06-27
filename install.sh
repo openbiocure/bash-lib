@@ -96,28 +96,111 @@ install_from_remote() {
     TEMP_DIR=$(mktemp -d)
     cd $TEMP_DIR
 
-    # Download and extract the zip file
-    if curl -sSL -o bash-lib.zip $BASH_LIB_ZIP_URL && unzip -q bash-lib.zip; then
-        # Move the extracted content to the target directory
-        if sudo cp -r bash-lib-main/* $BASH_LIB_PATH/; then
-            make_scripts_executable
-            add_to_shell_profile
-            source_bash_lib
+    # Download the zip file
+    echo "📥 Downloading bash-lib..."
+    if ! curl -sSL -o bash-lib.zip $BASH_LIB_ZIP_URL; then
+        echo "❌ Failed to download bash-lib. Please check your internet connection and try again."
+        cd - >/dev/null
+        rm -rf $TEMP_DIR
+        return 1
+    fi
 
-            echo ""
-            echo "✅ bash-lib installed successfully from remote repository!"
-            echo "📝 The 'import' function is now available in this session."
-            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
-            echo ""
-            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
-        else
-            echo "❌ Failed to copy extracted files to $BASH_LIB_PATH"
+    # Try different extraction methods
+    echo "📦 Extracting bash-lib..."
+    local extracted=false
+
+    # Method 1: Try unzip
+    if command -v unzip >/dev/null 2>&1; then
+        if unzip -q bash-lib.zip; then
+            extracted=true
+        fi
+    fi
+
+    # Method 2: Try tar (some systems have tar but not unzip)
+    if [ "$extracted" = false ] && command -v tar >/dev/null 2>&1; then
+        if tar -xf bash-lib.zip; then
+            extracted=true
+        fi
+    fi
+
+    # Method 3: Try 7z if available
+    if [ "$extracted" = false ] && command -v 7z >/dev/null 2>&1; then
+        if 7z x bash-lib.zip >/dev/null 2>&1; then
+            extracted=true
+        fi
+    fi
+
+    # Method 4: Try installing unzip if possible
+    if [ "$extracted" = false ]; then
+        echo "⚠️  No extraction tool found. Attempting to install unzip..."
+        if command -v yum >/dev/null 2>&1; then
+            # RHEL/CentOS/Fedora
+            if yum install -y unzip >/dev/null 2>&1; then
+                if unzip -q bash-lib.zip; then
+                    extracted=true
+                fi
+            fi
+        elif command -v apt-get >/dev/null 2>&1; then
+            # Debian/Ubuntu
+            if apt-get update >/dev/null 2>&1 && apt-get install -y unzip >/dev/null 2>&1; then
+                if unzip -q bash-lib.zip; then
+                    extracted=true
+                fi
+            fi
+        elif command -v dnf >/dev/null 2>&1; then
+            # Fedora (newer)
+            if dnf install -y unzip >/dev/null 2>&1; then
+                if unzip -q bash-lib.zip; then
+                    extracted=true
+                fi
+            fi
+        fi
+    fi
+
+    # Check if extraction was successful
+    if [ "$extracted" = false ]; then
+        echo "❌ Failed to extract bash-lib. Please install unzip or tar:"
+        echo "   RHEL/CentOS: yum install -y unzip"
+        echo "   Ubuntu/Debian: apt-get install -y unzip"
+        echo "   Fedora: dnf install -y unzip"
+        cd - >/dev/null
+        rm -rf $TEMP_DIR
+        return 1
+    fi
+
+    # Find the extracted directory (it might be named differently)
+    local extracted_dir=""
+    if [ -d "bash-lib-main" ]; then
+        extracted_dir="bash-lib-main"
+    elif [ -d "main" ]; then
+        extracted_dir="main"
+    else
+        # Find any directory that looks like bash-lib
+        extracted_dir=$(find . -maxdepth 1 -type d -name "*bash*lib*" | head -1)
+        if [ -z "$extracted_dir" ]; then
+            echo "❌ Could not find extracted bash-lib directory"
             cd - >/dev/null
             rm -rf $TEMP_DIR
             return 1
         fi
+        extracted_dir=$(basename "$extracted_dir")
+    fi
+
+    # Move the extracted content to the target directory
+    echo "📁 Installing to $BASH_LIB_PATH..."
+    if sudo cp -r "$extracted_dir"/* $BASH_LIB_PATH/; then
+        make_scripts_executable
+        add_to_shell_profile
+        source_bash_lib
+
+        echo ""
+        echo "✅ bash-lib installed successfully from remote repository!"
+        echo "📝 The 'import' function is now available in this session."
+        echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+        echo ""
+        echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
     else
-        echo "❌ Failed to download or extract bash-lib. Please check your internet connection and try again."
+        echo "❌ Failed to copy extracted files to $BASH_LIB_PATH"
         cd - >/dev/null
         rm -rf $TEMP_DIR
         return 1
