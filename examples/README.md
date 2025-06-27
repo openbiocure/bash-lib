@@ -48,6 +48,10 @@ examples/
 │   ├── 04_compression_info.sh
 │   ├── 05_advanced_features.sh
 │   └── compression_example.sh
+├── security/                # Security and firewall management
+│   ├── firewall_example.sh
+│   ├── test_firewall.sh
+│   └── security_config.sh
 ├── users/                   # User management and information
 │   ├── 01_basic_users.sh
 │   └── users_example.sh
@@ -125,6 +129,13 @@ The compression module includes focused examples for different aspects:
 - **05_advanced_features.sh**: Advanced features like password protection, compression levels, validation
 - **compression_example.sh**: Comprehensive example covering all compression features (legacy)
 
+### Security Module (`security/`)
+The security module provides firewall management capabilities:
+
+- **firewall_example.sh**: Basic firewall operations and configuration
+- **test_firewall.sh**: Safe testing of firewall functionality
+- **security_config.sh**: Real-world security configuration for different server types
+
 ### Users Module (`users/`)
 - **01_basic_users.sh**: Basic user information operations
 - **users_example.sh**: Comprehensive example covering all user features (legacy)
@@ -194,6 +205,11 @@ Each module now has focused examples that can be run individually:
 ./compression/03_compression_formats.sh
 ./compression/04_compression_info.sh
 ./compression/05_advanced_features.sh
+
+# Security examples
+./security/firewall_example.sh
+./security/test_firewall.sh
+./security/security_config.sh web
 ```
 
 ### Running All Examples
@@ -301,4 +317,4 @@ For issues with examples or bash-lib usage:
 1. Check the main bash-lib documentation
 2. Review the module-specific documentation
 3. Run examples with debug mode enabled
-4. Check the bash-lib issue tracker 
+4. Check the bash-lib issue tracker
