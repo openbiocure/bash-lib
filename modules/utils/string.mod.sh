@@ -15,22 +15,22 @@ import console
 
 #
 # (Usage)
-#   Checks if a paticular string is empty returns true; false otherwise    
+#   Checks if a paticular string is empty returns true; false otherwise
 #
 function string.isEmpty() {
-    [[ -z $1 ]] && echo true || echo false;
+    [[ -z $1 ]] && echo true || echo false
 }
 
 #
 # (Usage)
 #   Replaces a character with another character if matched in the input string
 #
-function string.replace (){
-    local replace=$1;
-    local with=$2;
-    local str=$3;
+function string.replace() {
+    local replace=$1
+    local with=$2
+    local str=$3
 
-    echo ${str//$1/$2};
+    echo ${str//$1/$2}
 }
 
 #
@@ -109,6 +109,96 @@ function string.basename() {
     echo "${path##*/}"
 }
 
+#
+# string.render: Render a template string or file with environment variables
+# Usage:
+#   string.render "Hello $USER"
+#   string.render --file template.txt
+#   string.render --file template.txt --out output.txt
+#   string.render --strict "Hello $UNSET_VAR"
+#   string.render --strict --file template.txt
+#
+function string.render() {
+    local input=""
+    local file=""
+    local out=""
+    local strict=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --file)
+            file="$2"
+            shift 2
+            ;;
+        --out)
+            out="$2"
+            shift 2
+            ;;
+        --strict)
+            strict=true
+            shift
+            ;;
+        --help)
+            echo "Usage: string.render [--file <file>] [--out <file>] [--strict] <template>"
+            return 0
+            ;;
+        *)
+            if [[ -z "$input" ]]; then
+                input="$1"
+                shift
+            else
+                shift
+            fi
+            ;;
+        esac
+    done
+
+    # Read input
+    local template=""
+    if [[ -n "$file" ]]; then
+        if [[ ! -f "$file" ]]; then
+            echo "string.render: file not found: $file" >&2
+            return 1
+        fi
+        template="$(cat "$file")"
+    else
+        template="$input"
+    fi
+
+    # Strict mode: check for unset variables
+    if [[ "$strict" == true ]]; then
+        # Find all ${VAR} and $VAR patterns
+        local missing_vars=()
+        local var_regex='\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?'
+        while read -r var; do
+            if [[ -z "${!var+x}" ]]; then
+                missing_vars+=("$var")
+            fi
+        done < <(echo "$template" | grep -oE '\$\{?[A-Za-z_][A-Za-z0-9_]*\}?')
+        if [[ ${#missing_vars[@]} -gt 0 ]]; then
+            echo "string.render: missing variables: ${missing_vars[*]}" >&2
+            return 1
+        fi
+    fi
+
+    # Render using envsubst if available, else Bash eval
+    local rendered=""
+    if command -v envsubst >/dev/null 2>&1; then
+        rendered="$(echo "$template" | envsubst)"
+    else
+        # Use Bash parameter expansion
+        rendered="$(eval "echo \"$template\"")"
+    fi
+
+    # Output
+    if [[ -n "$out" ]]; then
+        echo "$rendered" >"$out"
+    else
+        echo "$rendered"
+    fi
+}
+
 ##
 ## (Usage) Show string module help
 ##
@@ -127,6 +217,7 @@ Available Functions:
   string.startswith <str> <prefix>     - Check if string starts with prefix
   string.endswith <str> <suffix>       - Check if string ends with suffix
   string.basename <path>                - Get the basename of a path
+  string.render <template>               - Render a template string or file
   string.help                          - Show this help
 
 Examples:
@@ -140,5 +231,10 @@ Examples:
   string.endswith "foobar" "bar"        # Returns true
   string.replace "a" "b" "cat"         # Returns cbt
   string.basename "/path/to/file.txt"  # Returns file.txt
+  string.render "Hello $USER"
+  string.render --file template.txt
+  string.render --file template.txt --out output.txt
+  string.render --strict "Hello $UNSET_VAR"
+  string.render --strict --file template.txt
 EOF
 }

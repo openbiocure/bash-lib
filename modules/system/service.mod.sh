@@ -7,13 +7,13 @@
 SERVICE_MODULE_VERSION="1.0.0"
 
 # Default service configuration
-declare -g SERVICE_DEFAULT_TIMEOUT=30
-declare -g SERVICE_DEFAULT_RETRY_INTERVAL=2
-declare -g SERVICE_DEFAULT_HEALTH_CHECK_INTERVAL=5
+SERVICE_DEFAULT_TIMEOUT=30
+SERVICE_DEFAULT_RETRY_INTERVAL=2
+SERVICE_DEFAULT_HEALTH_CHECK_INTERVAL=5
 
 # Service status tracking
-declare -gA SERVICE_PIDS=()
-declare -gA SERVICE_STATUS=()
+declare -A SERVICE_PIDS
+declare -A SERVICE_STATUS
 
 # Start a service with health check
 # Usage: service.start <service_name> <command> [options]
