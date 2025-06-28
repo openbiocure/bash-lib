@@ -1,89 +1,133 @@
 #!/bin/bash
 
-# Variables
+# bash-lib Installation Script
+# This script installs bash-lib to /opt/bash-lib by default
+
+set -e
+
+# Configuration
+BASH_LIB_PATH="${BASH__PATH:-/opt/bash-lib}"
 BASH_LIB_ZIP_URL="https://github.com/openbiocure/bash-lib/archive/refs/heads/main.zip"
-BASH_LIB_PATH="/opt/bash-lib"
 SHELL_PROFILE=""
 BASH_PROFILE=""
 
-# Initialize shell profile based on current shell
-init_shell_profile() {
-    if [ -n "$BASH_VERSION" ]; then
-        SHELL_PROFILE="$HOME/.bashrc"
-        # Also check for .bash_profile for login shells
-        if [ -f "$HOME/.bash_profile" ]; then
-            BASH_PROFILE="$HOME/.bash_profile"
-        elif [ -f "$HOME/.profile" ]; then
-            BASH_PROFILE="$HOME/.profile"
-        fi
-    elif [ -n "$ZSH_VERSION" ]; then
-        SHELL_PROFILE="$HOME/.zshrc"
+# Detect if we're running in a Docker container or as root
+is_docker_or_root() {
+    # Check if we're running as root (UID 0)
+    if [ "$(id -u)" -eq 0 ]; then
+        return 0
+    fi
+
+    # Check if we're in a Docker container
+    if [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Get the appropriate command prefix (sudo or empty)
+get_cmd_prefix() {
+    if is_docker_or_root; then
+        echo ""
+    else
+        echo "sudo"
     fi
 }
 
-# Make all scripts executable
-make_scripts_executable() {
-    sudo chmod +x $BASH_LIB_PATH/*.sh
-    sudo chmod +x $BASH_LIB_PATH/core/*.sh
-    sudo chmod +x $BASH_LIB_PATH/modules/*/*.sh
+# Initialize shell profile detection
+init_shell_profile() {
+    # Detect the appropriate shell profile file
+    if [ -n "$ZSH_VERSION" ]; then
+        # Zsh
+        SHELL_PROFILE="$HOME/.zshrc"
+        BASH_PROFILE="$HOME/.zprofile"
+    elif [ -n "$BASH_VERSION" ]; then
+        # Bash
+        SHELL_PROFILE="$HOME/.bashrc"
+        BASH_PROFILE="$HOME/.bash_profile"
+    else
+        # Fallback
+        SHELL_PROFILE="$HOME/.profile"
+    fi
+
+    # Create the profile file if it doesn't exist
+    if [ ! -f "$SHELL_PROFILE" ]; then
+        touch "$SHELL_PROFILE"
+    fi
 }
 
 # Add bash-lib to shell profile
 add_to_shell_profile() {
-    # Add to .bashrc for interactive shells
-    if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$SHELL_PROFILE"; then
-        echo "source $BASH_LIB_PATH/core/init.sh" >>"$SHELL_PROFILE"
+    local cmd_prefix=$(get_cmd_prefix)
+
+    # Add export for BASH__PATH
+    if ! grep -q "export BASH__PATH=$BASH_LIB_PATH" "$SHELL_PROFILE" 2>/dev/null; then
         echo "export BASH__PATH=$BASH_LIB_PATH" >>"$SHELL_PROFILE"
     fi
 
-    # Add to .bash_profile/.profile for login shells (SSH sessions)
-    if [ -n "$BASH_PROFILE" ]; then
-        if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$BASH_PROFILE"; then
-            echo "source $BASH_LIB_PATH/core/init.sh" >>"$BASH_PROFILE"
+    # Add source for init.sh
+    if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$SHELL_PROFILE" 2>/dev/null; then
+        echo "source $BASH_LIB_PATH/core/init.sh" >>"$SHELL_PROFILE"
+    fi
+
+    # Also add to .bash_profile if it exists and is different
+    if [ -n "$BASH_PROFILE" ] && [ "$SHELL_PROFILE" != "$BASH_PROFILE" ] && [ -f "$BASH_PROFILE" ]; then
+        if ! grep -q "export BASH__PATH=$BASH_LIB_PATH" "$BASH_PROFILE" 2>/dev/null; then
             echo "export BASH__PATH=$BASH_LIB_PATH" >>"$BASH_PROFILE"
         fi
+        if ! grep -q "source $BASH_LIB_PATH/core/init.sh" "$BASH_PROFILE" 2>/dev/null; then
+            echo "source $BASH_LIB_PATH/core/init.sh" >>"$BASH_PROFILE"
+        fi
     fi
 }
 
-# Source bash-lib for current session
+# Source bash-lib in current session
 source_bash_lib() {
-    # Set the BASH__PATH environment variable
-    export BASH__PATH=$BASH_LIB_PATH
-
-    # Source the init script to make import function available
+    export BASH__PATH="$BASH_LIB_PATH"
     if [ -f "$BASH_LIB_PATH/core/init.sh" ]; then
         source "$BASH_LIB_PATH/core/init.sh"
-        echo "bash-lib sourced successfully for current session."
 
-        # Verify that import function is available
+        # Verify import function is available
         if command -v import >/dev/null 2>&1; then
-            echo "✅ 'import' function is now available!"
+            echo "✅ bash-lib successfully loaded in current session"
         else
-            echo "⚠️  Warning: 'import' function not found. Please restart your terminal."
+            echo "⚠️  bash-lib loaded but 'import' function not found"
         fi
     else
-        echo "❌ Error: Could not find bash-lib init script at $BASH_LIB_PATH/core/init.sh"
-        return 1
+        echo "⚠️  Could not source bash-lib (init.sh not found)"
     fi
 }
 
-# Install from local files
-install_from_local() {
-    echo "Installing bash-lib from local files..."
+# Make scripts executable
+make_scripts_executable() {
+    local cmd_prefix=$(get_cmd_prefix)
 
-    if sudo cp -r . $BASH_LIB_PATH/; then
+    echo "🔧 Making scripts executable..."
+    find "$BASH_LIB_PATH" -name "*.sh" -type f -exec $cmd_prefix chmod +x {} \; 2>/dev/null || true
+}
+
+# Install from local directory
+install_from_local() {
+    echo "Installing bash-lib from local directory..."
+
+    # Copy files to target directory
+    echo "📁 Installing to $BASH_LIB_PATH..."
+    local cmd_prefix=$(get_cmd_prefix)
+
+    if $cmd_prefix cp -r . "$BASH_LIB_PATH/"; then
         make_scripts_executable
         add_to_shell_profile
         source_bash_lib
 
         echo ""
-        echo "✅ bash-lib installed successfully from local files!"
+        echo "✅ bash-lib installed successfully from local directory!"
         echo "📝 The 'import' function is now available in this session."
         echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
         echo ""
         echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
     else
-        echo "❌ Failed to copy bash-lib files. Please check if the files exist."
+        echo "❌ Failed to copy files to $BASH_LIB_PATH"
         return 1
     fi
 }
@@ -133,23 +177,25 @@ install_from_remote() {
     # Method 4: Try installing unzip if possible
     if [ "$extracted" = false ]; then
         echo "⚠️  No extraction tool found. Attempting to install unzip..."
+        local cmd_prefix=$(get_cmd_prefix)
+
         if command -v yum >/dev/null 2>&1; then
             # RHEL/CentOS/Fedora
-            if yum install -y unzip >/dev/null 2>&1; then
+            if $cmd_prefix yum install -y unzip >/dev/null 2>&1; then
                 if unzip -q bash-lib.zip; then
                     extracted=true
                 fi
             fi
         elif command -v apt-get >/dev/null 2>&1; then
             # Debian/Ubuntu
-            if apt-get update >/dev/null 2>&1 && apt-get install -y unzip >/dev/null 2>&1; then
+            if $cmd_prefix apt-get update >/dev/null 2>&1 && $cmd_prefix apt-get install -y unzip >/dev/null 2>&1; then
                 if unzip -q bash-lib.zip; then
                     extracted=true
                 fi
             fi
         elif command -v dnf >/dev/null 2>&1; then
             # Fedora (newer)
-            if dnf install -y unzip >/dev/null 2>&1; then
+            if $cmd_prefix dnf install -y unzip >/dev/null 2>&1; then
                 if unzip -q bash-lib.zip; then
                     extracted=true
                 fi
@@ -188,7 +234,9 @@ install_from_remote() {
 
     # Move the extracted content to the target directory
     echo "📁 Installing to $BASH_LIB_PATH..."
-    if sudo cp -r "$extracted_dir"/* $BASH_LIB_PATH/; then
+    local cmd_prefix=$(get_cmd_prefix)
+
+    if $cmd_prefix cp -r "$extracted_dir"/* $BASH_LIB_PATH/; then
         make_scripts_executable
         add_to_shell_profile
         source_bash_lib
@@ -213,8 +261,10 @@ install_from_remote() {
 
 # Main installation function
 install() {
+    local cmd_prefix=$(get_cmd_prefix)
+
     # Create the directory if it does not exist
-    sudo mkdir -p $BASH_LIB_PATH
+    $cmd_prefix mkdir -p $BASH_LIB_PATH
 
     # Check if we're installing locally (from current directory)
     if [ -d "./core" ] && [ -d "./modules" ]; then
@@ -226,9 +276,11 @@ install() {
 
 # Uninstall bash-lib
 uninstall() {
+    local cmd_prefix=$(get_cmd_prefix)
+
     # Remove the entire directory
     if [ -d "$BASH_LIB_PATH" ]; then
-        sudo rm -rf "$BASH_LIB_PATH"
+        $cmd_prefix rm -rf "$BASH_LIB_PATH"
     fi
 
     # Remove sourcing from shell profile
