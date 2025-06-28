@@ -29,7 +29,7 @@ fi
 
 # Try different extraction methods
 echo "📦 Extracting bash-lib..."
-local extracted=false
+extracted=false
 
 # Method 1: Try unzip
 if command -v unzip >/dev/null 2>&1; then
@@ -92,7 +92,7 @@ if [ "$extracted" = false ]; then
 fi
 
 # Find the extracted directory (it might be named differently)
-local extracted_dir=""
+extracted_dir=""
 if [ -d "bash-lib-main" ]; then
     extracted_dir="bash-lib-main"
 elif [ -d "main" ]; then
