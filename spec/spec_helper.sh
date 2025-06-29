@@ -7,8 +7,8 @@
 # }
 
 # Set up the environment for testing
-export BASH__PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/" && pwd)"
-export BASH__VERBOSE="info"
+export BASH__PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export BASH__VERBOSE="error"
 
 # Source the core initialization
 source lib/init.sh

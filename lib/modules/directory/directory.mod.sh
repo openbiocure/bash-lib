@@ -25,104 +25,81 @@ __DIR__DEFAULT_SORT_BY="name" # name, size, date, type
 ##   directory.list ~/Documents --pattern="*.txt" --max=50
 ##
 function directory.list() {
-    local path="${1:-.}"
-    shift
-
-    if [[ ! -d "$path" ]]; then
-        console.error "Directory does not exist: $path"
-        return 1
-    fi
-
-    local show_hidden=false
+    local dir="${1:-.}"
     local long_format=false
-    local file_type=""
+    local type_filter=""
     local pattern=""
-    local max_results="${__DIR__DEFAULT_MAX_RESULTS}"
-    local sort_by="${__DIR__DEFAULT_SORT_BY}"
-    local reverse_sort=false
-
-    # Parse options
-    for arg in "$@"; do
-        case $arg in
-        --all | -a) show_hidden=true ;;
-        --long | -l) long_format=true ;;
-        --type=*) file_type="${arg#*=}" ;;
-        --pattern=*) pattern="${arg#*=}" ;;
-        --max=*) max_results="${arg#*=}" ;;
-        --sort=*) sort_by="${arg#*=}" ;;
-        --reverse | -r) reverse_sort=true ;;
-        *) ;;
+    local max_results="$__DIR__DEFAULT_MAX_RESULTS"
+    local sort_by="$__DIR__DEFAULT_SORT_BY"
+    local reverse=false
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --long | -l)
+            long_format=true
+            shift
+            ;;
+        --type | -t)
+            type_filter="$2"
+            shift 2
+            ;;
+        --pattern | -p)
+            pattern="$2"
+            shift 2
+            ;;
+        --max | -m)
+            max_results="$2"
+            shift 2
+            ;;
+        --sort | -s)
+            sort_by="$2"
+            shift 2
+            ;;
+        --reverse | -r)
+            reverse=true
+            shift
+            ;;
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
         esac
     done
-
-    # Build find command
-    local find_cmd="find \"$path\" -maxdepth 1"
-
-    if [[ "$show_hidden" == "false" ]]; then
-        find_cmd="$find_cmd -not -name '.*'"
+    if [[ ! -d "$dir" ]]; then
+        console.error "Directory does not exist: $dir"
+        return 1
     fi
-
-    if [[ -n "$file_type" ]]; then
-        case $file_type in
-        file) find_cmd="$find_cmd -type f" ;;
-        dir | directory) find_cmd="$find_cmd -type d" ;;
-        link | symlink) find_cmd="$find_cmd -type l" ;;
-        *) ;;
+    local find_cmd="find \"$dir\" -maxdepth 1"
+    if [[ -n "$type_filter" ]]; then
+        case "$type_filter" in
+        "file" | "f") find_cmd="$find_cmd -type f" ;;
+        "directory" | "dir" | "d") find_cmd="$find_cmd -type d" ;;
+        *) console.error "Invalid type filter: $type_filter (use: file, directory)" ;;
         esac
     fi
-
     if [[ -n "$pattern" ]]; then
         find_cmd="$find_cmd -name \"$pattern\""
     fi
-
-    # Execute find and process results
-    local results=()
     local count=0
-    while IFS= read -r -d '' item && [[ $count -lt $max_results ]]; do
-        results+=("$item")
+    while IFS= read -r -d '' item; do
+        if [[ "$item" == "$dir" ]]; then continue; fi
+        local type="file"
+        if [[ -d "$item" ]]; then type="directory"; fi
+        if [[ "$long_format" == "true" ]]; then
+            directory.__display_long "$item" "$type"
+            echo
+        else
+            directory.__display_simple "$item" "$type"
+        fi
         ((count++))
+        if [[ $count -ge $max_results ]]; then break; fi
     done < <(eval "$find_cmd -print0" 2>/dev/null)
-
-    # Sort results
-    if [[ ${#results[@]} -gt 0 ]]; then
-        case $sort_by in
-        name)
-            if [[ "$reverse_sort" == "true" ]]; then
-                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | sort -r))
-            else
-                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | sort))
-            fi
-            ;;
-        size)
-            if [[ "$reverse_sort" == "true" ]]; then
-                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%s %n" {} 2>/dev/null | sort -nr | cut -d' ' -f2-))
-            else
-                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%s %n" {} 2>/dev/null | sort -n | cut -d' ' -f2-))
-            fi
-            ;;
-        date)
-            if [[ "$reverse_sort" == "true" ]]; then
-                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%Y %n" {} 2>/dev/null | sort -nr | cut -d' ' -f2-))
-            else
-                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%Y %n" {} 2>/dev/null | sort -n | cut -d' ' -f2-))
-            fi
-            ;;
-        esac
-    fi
-
-    # Display results
-    if [[ ${#results[@]} -eq 0 ]]; then
-        console.info "No items found in $path"
-        return 0
-    fi
-
-    if [[ "$long_format" == "true" ]]; then
-        directory.__display_long "${results[@]}"
+    echo "items in $dir"
+    if [[ $count -eq 0 ]]; then
+        console.info "No items found in directory: $dir"
     else
-        directory.__display_simple "${results[@]}"
+        console.success "Found $count items in directory: $dir"
     fi
-
-    console.info "Found ${#results[@]} items in $path"
 }
 
 ##
@@ -133,85 +110,79 @@ function directory.list() {
 ##   directory.search ~/Documents "*.log" --size=+1M --max=20
 ##
 function directory.search() {
-    local path="${1:-.}"
-    local pattern="$2"
-    shift 2
-
-    if [[ ! -d "$path" ]]; then
-        console.error "Directory does not exist: $path"
-        return 1
-    fi
-
-    if [[ -z "$pattern" ]]; then
-        console.error "Search pattern is required"
-        return 1
-    fi
-
-    local max_depth="${__DIR__DEFAULT_DEPTH}"
-    local file_type=""
-    local size_filter=""
-    local max_results="${__DIR__DEFAULT_MAX_RESULTS}"
-    local case_sensitive=true
+    local search_dir="${1:-.}"
+    local pattern="${2:-*}"
+    local max_depth="$__DIR__DEFAULT_DEPTH"
+    local type_filter=""
+    local long_format=false
 
     # Parse options
-    for arg in "$@"; do
-        case $arg in
-        --depth=*) max_depth="${arg#*=}" ;;
-        --type=*) file_type="${arg#*=}" ;;
-        --size=*) size_filter="${arg#*=}" ;;
-        --max=*) max_results="${arg#*=}" ;;
-        --ignore-case | -i) case_sensitive=false ;;
-        *) ;;
+    shift 2
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --depth | -d)
+            max_depth="$2"
+            shift 2
+            ;;
+        --type | -t)
+            type_filter="$2"
+            shift 2
+            ;;
+        --long | -l)
+            long_format=true
+            shift
+            ;;
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
         esac
     done
 
+    # Validate directory
+    if [[ ! -d "$search_dir" ]]; then
+        console.error "Search directory does not exist: $search_dir"
+        return 1
+    fi
+
     # Build find command
-    local find_cmd="find \"$path\" -maxdepth $max_depth"
+    local find_cmd="find \"$search_dir\" -maxdepth $max_depth -name \"$pattern\""
 
-    if [[ "$case_sensitive" == "false" ]]; then
-        find_cmd="$find_cmd -iname \"$pattern\""
-    else
-        find_cmd="$find_cmd -name \"$pattern\""
-    fi
-
-    if [[ -n "$file_type" ]]; then
-        case $file_type in
-        file) find_cmd="$find_cmd -type f" ;;
-        dir | directory) find_cmd="$find_cmd -type d" ;;
-        link | symlink) find_cmd="$find_cmd -type l" ;;
-        *) ;;
+    # Add type filter
+    if [[ -n "$type_filter" ]]; then
+        case "$type_filter" in
+        "file" | "f") find_cmd="$find_cmd -type f" ;;
+        "directory" | "dir" | "d") find_cmd="$find_cmd -type d" ;;
+        *) console.error "Invalid type filter: $type_filter" ;;
         esac
-    fi
-
-    if [[ -n "$size_filter" ]]; then
-        find_cmd="$find_cmd -size \"$size_filter\""
     fi
 
     # Execute search
-    local results=()
     local count=0
-    while IFS= read -r -d '' item && [[ $count -lt $max_results ]]; do
-        results+=("$item")
+    while IFS= read -r -d '' item; do
+        # Determine type
+        local type="file"
+        if [[ -d "$item" ]]; then
+            type="directory"
+        fi
+
+        # Display based on format
+        if [[ "$long_format" == "true" ]]; then
+            directory.__display_long "$item" "$type"
+            echo
+        else
+            echo "$item"
+        fi
+
         ((count++))
     done < <(eval "$find_cmd -print0" 2>/dev/null)
 
-    # Display results
-    if [[ ${#results[@]} -eq 0 ]]; then
-        console.info "No files found matching '$pattern' in $path"
-        return 0
+    if [[ $count -eq 0 ]]; then
+        console.info "No items found matching pattern '$pattern' in $search_dir"
+    else
+        echo "items matching $pattern"
+        console.success "Found $count items matching pattern '$pattern'"
     fi
-
-    console.info "Found ${#results[@]} items matching '$pattern':"
-    for item in "${results[@]}"; do
-        local relative_path="${item#$path/}"
-        if [[ -d "$item" ]]; then
-            console.info "  📁 $relative_path"
-        elif [[ -L "$item" ]]; then
-            console.info "  🔗 $relative_path"
-        else
-            console.info "  📄 $relative_path"
-        fi
-    done
 }
 
 ##
@@ -222,55 +193,60 @@ function directory.search() {
 ##   directory.remove ~/temp --pattern="*.tmp" --force
 ##
 function directory.remove() {
-    local path="$1"
-    shift
-
-    if [[ -z "$path" ]]; then
-        console.error "Path is required"
-        return 1
-    fi
-
+    local target="$1"
     local recursive=false
     local force=false
-    local pattern=""
-
-    # Parse options
-    for arg in "$@"; do
-        case $arg in
-        --recursive | -r) recursive=true ;;
-        --force | -f) force=true ;;
-        --pattern=*) pattern="${arg#*=}" ;;
-        *) ;;
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --recursive | -r)
+            recursive=true
+            shift
+            ;;
+        --force | -f)
+            force=true
+            shift
+            ;;
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
         esac
     done
-
-    if [[ -n "$pattern" ]]; then
-        # Remove files matching pattern
-        if [[ "$recursive" == "true" ]]; then
-            find "$path" -name "$pattern" -type f -print0 | xargs -0 rm -f
-        else
-            find "$path" -maxdepth 1 -name "$pattern" -type f -print0 | xargs -0 rm -f
+    if [[ -z "$target" ]]; then
+        console.error "No target specified"
+        return 1
+    fi
+    if [[ ! -e "$target" ]]; then
+        console.error "Target does not exist: $target"
+        return 1
+    fi
+    local was_file=0
+    if [[ -f "$target" ]]; then was_file=1; fi
+    local was_dir=0
+    if [[ -d "$target" ]]; then was_dir=1; fi
+    local rm_cmd="rm"
+    if [[ "$recursive" == "true" ]]; then rm_cmd="rm -r"; fi
+    if [[ "$force" == "true" ]]; then rm_cmd="$rm_cmd -f"; fi
+    if [[ $was_dir -eq 1 && "$force" != "true" ]]; then
+        console.warn "Removing directory: $target"
+        read -p "Are you sure? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            console.info "Operation cancelled"
+            return 0
         fi
-        console.success "Removed files matching '$pattern' from $path"
+    fi
+    if eval "$rm_cmd \"$target\"" 2>/dev/null; then
+        if [[ $was_file -eq 1 ]]; then
+            echo "Removed file: $target"
+        else
+            echo "Removed directory: $target"
+        fi
+        console.success "Removed successfully: $target"
     else
-        # Remove specific path
-        if [[ ! -e "$path" ]]; then
-            console.error "Path does not exist: $path"
-            return 1
-        fi
-
-        if [[ -d "$path" && "$recursive" == "false" ]]; then
-            if [[ "$force" == "true" ]]; then
-                rm -rf "$path"
-                console.success "Removed directory: $path"
-            else
-                console.error "Cannot remove directory without --recursive flag"
-                return 1
-            fi
-        else
-            rm -f "$path"
-            console.success "Removed file: $path"
-        fi
+        console.error "Failed to remove: $target"
+        return 1
     fi
 }
 
@@ -284,62 +260,82 @@ function directory.remove() {
 function directory.copy() {
     local source="$1"
     local destination="$2"
+    local recursive=false
+    local preserve_attributes=false
     shift 2
-
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --recursive | -r)
+            recursive=true
+            shift
+            ;;
+        --preserve | -p)
+            preserve_attributes=true
+            shift
+            ;;
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
+        esac
+    done
     if [[ -z "$source" || -z "$destination" ]]; then
-        console.error "Source and destination are required"
+        console.error "Source and destination must be specified"
         return 1
     fi
-
     if [[ ! -e "$source" ]]; then
         console.error "Source does not exist: $source"
         return 1
     fi
-
-    local recursive=false
-    local preserve=false
-    local pattern=""
-
-    # Parse options
-    for arg in "$@"; do
-        case $arg in
-        --recursive | -r) recursive=true ;;
-        --preserve | -p) preserve=true ;;
-        --pattern=*) pattern="${arg#*=}" ;;
-        *) ;;
-        esac
-    done
-
-    # Create destination directory if it doesn't exist
-    if [[ ! -d "$destination" ]]; then
+    # If destination ends with /, treat as directory
+    if [[ "$destination" == */ ]]; then
         mkdir -p "$destination" || {
             console.error "Failed to create destination directory: $destination"
             return 1
         }
-    fi
-
-    if [[ -n "$pattern" ]]; then
-        # Copy files matching pattern
-        local cp_opts=""
-        [[ "$preserve" == "true" ]] && cp_opts="$cp_opts -p"
-
-        if [[ "$recursive" == "true" ]]; then
-            find "$source" -name "$pattern" -type f -exec cp $cp_opts {} "$destination/" \;
+        local cp_cmd="cp"
+        if [[ "$recursive" == "true" ]]; then cp_cmd="cp -r"; fi
+        if [[ "$preserve_attributes" == "true" ]]; then cp_cmd="$cp_cmd -p"; fi
+        if eval "$cp_cmd \"$source\" \"$destination\"" 2>/dev/null; then
+            echo "Copied: $source -> $destination"
+            console.success "Copied successfully: $source -> $destination"
         else
-            find "$source" -maxdepth 1 -name "$pattern" -type f -exec cp $cp_opts {} "$destination/" \;
-        fi
-        console.success "Copied files matching '$pattern' to $destination"
-    else
-        # Copy specific path
-        local cp_opts=""
-        [[ "$recursive" == "true" ]] && cp_opts="$cp_opts -r"
-        [[ "$preserve" == "true" ]] && cp_opts="$cp_opts -p"
-
-        cp $cp_opts "$source" "$destination/" || {
-            console.error "Failed to copy $source to $destination"
+            console.error "Failed to copy: $source -> $destination"
             return 1
-        }
-        console.success "Copied $source to $destination"
+        fi
+    else
+        # If destination does not exist, but is intended as a directory, create it
+        if [[ -d "$destination" ]]; then
+            local cp_cmd="cp"
+            if [[ "$recursive" == "true" ]]; then cp_cmd="cp -r"; fi
+            if [[ "$preserve_attributes" == "true" ]]; then cp_cmd="$cp_cmd -p"; fi
+            if eval "$cp_cmd \"$source\" \"$destination\"" 2>/dev/null; then
+                echo "Copied: $source -> $destination"
+                console.success "Copied successfully: $source -> $destination"
+            else
+                console.error "Failed to copy: $source -> $destination"
+                return 1
+            fi
+        else
+            # If destination is a file path, ensure parent dir exists
+            local dest_dir="$(dirname "$destination")"
+            if [[ ! -d "$dest_dir" ]]; then
+                mkdir -p "$dest_dir" || {
+                    console.error "Failed to create destination directory: $dest_dir"
+                    return 1
+                }
+            fi
+            local cp_cmd="cp"
+            if [[ "$recursive" == "true" ]]; then cp_cmd="cp -r"; fi
+            if [[ "$preserve_attributes" == "true" ]]; then cp_cmd="$cp_cmd -p"; fi
+            if eval "$cp_cmd \"$source\" \"$destination\"" 2>/dev/null; then
+                echo "Copied: $source -> $destination"
+                console.success "Copied successfully: $source -> $destination"
+            else
+                console.error "Failed to copy: $source -> $destination"
+                return 1
+            fi
+        fi
     fi
 }
 
@@ -354,7 +350,7 @@ function directory.move() {
     local destination="$2"
 
     if [[ -z "$source" || -z "$destination" ]]; then
-        console.error "Source and destination are required"
+        console.error "Source and destination must be specified"
         return 1
     fi
 
@@ -363,25 +359,14 @@ function directory.move() {
         return 1
     fi
 
-    # Create destination directory if moving to a directory
-    if [[ -d "$destination" ]]; then
-        destination="$destination/$(basename "$source")"
+    # Execute move
+    if mv "$source" "$destination" 2>/dev/null; then
+        echo "Moved: $source -> $destination"
+        console.success "Moved successfully: $source -> $destination"
     else
-        local dest_dir=$(dirname "$destination")
-        if [[ ! -d "$dest_dir" ]]; then
-            mkdir -p "$dest_dir" || {
-                console.error "Failed to create destination directory: $dest_dir"
-                return 1
-            }
-        fi
-    fi
-
-    mv "$source" "$destination" || {
-        console.error "Failed to move $source to $destination"
+        console.error "Failed to move: $source -> $destination"
         return 1
-    }
-
-    console.success "Moved $source to $destination"
+    fi
 }
 
 ##
@@ -391,38 +376,48 @@ function directory.move() {
 ##   directory.create ~/new/dir --parents
 ##
 function directory.create() {
-    local path="$1"
-    shift
-
-    if [[ -z "$path" ]]; then
-        console.error "Path is required"
-        return 1
-    fi
-
-    local parents=false
+    local dir="$1"
+    local create_parents=false
 
     # Parse options
-    for arg in "$@"; do
-        case $arg in
-        --parents | -p) parents=true ;;
-        *) ;;
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --parents | -p)
+            create_parents=true
+            shift
+            ;;
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
         esac
     done
 
-    if [[ -e "$path" ]]; then
-        console.warn "Path already exists: $path"
+    if [[ -z "$dir" ]]; then
+        console.error "No directory path specified"
+        return 1
+    fi
+
+    # Check if directory already exists
+    if [[ -d "$dir" ]]; then
+        console.info "Directory already exists: $dir"
         return 0
     fi
 
-    local mkdir_opts=""
-    [[ "$parents" == "true" ]] && mkdir_opts="$mkdir_opts -p"
+    # Create directory
+    local mkdir_cmd="mkdir"
+    if [[ "$create_parents" == "true" ]]; then
+        mkdir_cmd="mkdir -p"
+    fi
 
-    mkdir $mkdir_opts "$path" || {
-        console.error "Failed to create directory: $path"
+    if eval "$mkdir_cmd \"$dir\"" 2>/dev/null; then
+        echo "Created directory: $dir"
+        console.success "Directory created successfully: $dir"
+    else
+        console.error "Failed to create directory: $dir"
         return 1
-    }
-
-    console.success "Created directory: $path"
+    fi
 }
 
 ##
@@ -432,72 +427,54 @@ function directory.create() {
 ##   directory.info ~/directory --detailed
 ##
 function directory.info() {
-    local path="$1"
-    shift
-
-    if [[ -z "$path" ]]; then
-        console.error "Path is required"
-        return 1
-    fi
-
-    if [[ ! -e "$path" ]]; then
-        console.error "Path does not exist: $path"
-        return 1
-    fi
-
+    local target="${1:-.}"
     local detailed=false
 
     # Parse options
-    for arg in "$@"; do
-        case $arg in
-        --detailed | -d) detailed=true ;;
-        *) ;;
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --detailed | -d)
+            detailed=true
+            shift
+            ;;
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
         esac
     done
 
-    local name=$(basename "$path")
-    local type=""
-    local size=""
-    local permissions=""
-    local owner=""
-    local modified=""
-
-    if [[ -d "$path" ]]; then
-        type="Directory"
-        size=$(du -sh "$path" 2>/dev/null | cut -f1)
-    elif [[ -L "$path" ]]; then
-        type="Symbolic Link"
-        size=$(stat -c "%s" "$path" 2>/dev/null | numfmt --to=iec 2>/dev/null || echo "Unknown")
-    else
-        type="File"
-        size=$(stat -c "%s" "$path" 2>/dev/null | numfmt --to=iec 2>/dev/null || echo "Unknown")
+    if [[ ! -e "$target" ]]; then
+        console.error "Target does not exist: $target"
+        return 1
     fi
 
-    permissions=$(stat -c "%A" "$path" 2>/dev/null || echo "Unknown")
-    owner=$(stat -c "%U:%G" "$path" 2>/dev/null || echo "Unknown")
-    modified=$(stat -c "%y" "$path" 2>/dev/null || echo "Unknown")
-
-    console.info "File Information:"
-    console.info "  Name: $name"
-    console.info "  Type: $type"
-    console.info "  Size: $size"
-    console.info "  Permissions: $permissions"
-    console.info "  Permissions Description: $(directory.__permissions_to_description "$permissions")"
-    console.info "  Owner: $owner"
-    console.info "  Modified: $modified"
+    echo "File Information"
+    echo "================"
+    echo "Name: $(basename "$target")"
+    echo "Path: $(realpath "$target")"
+    echo "Type: $(if [[ -d "$target" ]]; then echo "Directory"; else echo "File"; fi)"
 
     if [[ "$detailed" == "true" ]]; then
-        local inode=$(stat -c "%i" "$path" 2>/dev/null || echo "Unknown")
-        local hard_links=$(stat -c "%h" "$path" 2>/dev/null || echo "Unknown")
-        local device=$(stat -c "%D" "$path" 2>/dev/null || echo "Unknown")
+        local size=$(du -sh "$target" 2>/dev/null | cut -f1)
+        local permissions=$(stat -c "%a" "$target" 2>/dev/null || stat -f "%Lp" "$target" 2>/dev/null)
+        local owner=$(stat -c "%U" "$target" 2>/dev/null || stat -f "%Su" "$target" 2>/dev/null)
+        local group=$(stat -c "%G" "$target" 2>/dev/null || stat -f "%Sg" "$target" 2>/dev/null)
+        local modified=$(stat -c "%y" "$target" 2>/dev/null || stat -f "%Sm" "$target" 2>/dev/null)
+        local inode=$(stat -c "%i" "$target" 2>/dev/null || stat -f "%i" "$target" 2>/dev/null)
 
-        console.info "  Inode: $inode"
-        console.info "  Hard Links: $hard_links"
-        console.info "  Device: $device"
+        echo "Size: $size"
+        echo "Permissions: $(directory.__permissions_to_description "$permissions")"
+        echo "Owner: $owner"
+        echo "Group: $group"
+        echo "Modified: $modified"
+        echo "Inode: $inode"
 
-        if [[ -L "$path" ]]; then
-            local target=$(readlink "$path")
-            console.info "  Target: $target"
+        if [[ -d "$target" ]]; then
+            local file_count=$(find "$target" -maxdepth 1 -type f | wc -l)
+            local dir_count=$(find "$target" -maxdepth 1 -type d | wc -l)
+            echo "Contents: $file_count files, $((dir_count - 1)) subdirectories"
         fi
     fi
 }
@@ -509,42 +486,36 @@ function directory.info() {
 ##   directory.size ~/Downloads --human-readable
 ##
 function directory.size() {
-    local path="$1"
-    shift
-
-    if [[ -z "$path" ]]; then
-        console.error "Path is required"
-        return 1
-    fi
-
-    if [[ ! -d "$path" ]]; then
-        console.error "Path is not a directory: $path"
-        return 1
-    fi
-
+    local target="${1:-.}"
     local human_readable=true
 
     # Parse options
-    for arg in "$@"; do
-        case $arg in
-        --bytes | -b) human_readable=false ;;
-        *) ;;
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --bytes | -b)
+            human_readable=false
+            shift
+            ;;
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
         esac
     done
 
-    local size
-    if [[ "$human_readable" == "true" ]]; then
-        size=$(du -sh "$path" 2>/dev/null | cut -f1)
-    else
-        size=$(du -sb "$path" 2>/dev/null | cut -f1)
+    if [[ ! -e "$target" ]]; then
+        console.error "Target does not exist: $target"
+        return 1
     fi
 
-    if [[ -n "$size" ]]; then
-        console.info "Directory size: $size"
-        echo "$size"
+    local size
+    if [[ "$human_readable" == "true" ]]; then
+        size=$(du -sh "$target" 2>/dev/null | cut -f1)
+        echo "Directory size: $size"
     else
-        console.error "Failed to get directory size"
-        return 1
+        size=$(du -sb "$target" 2>/dev/null | cut -f1)
+        echo "Directory size: ${size} bytes"
     fi
 }
 
@@ -556,57 +527,46 @@ function directory.size() {
 ##   directory.find_empty ~/temp --directories-only
 ##
 function directory.find_empty() {
-    local path="${1:-.}"
-    shift
-
-    if [[ ! -d "$path" ]]; then
-        console.error "Directory does not exist: $path"
-        return 1
+    local search_dir="${1:-.}"
+    local max_depth=1
+    if [[ -n "$__DIR__DEFAULT_DEPTH" ]]; then
+        max_depth="$__DIR__DEFAULT_DEPTH"
     fi
-
-    local files_only=false
-    local directories_only=false
-
-    # Parse options
-    for arg in "$@"; do
-        case $arg in
-        --files-only | -f) files_only=true ;;
-        --directories-only | -d) directories_only=true ;;
-        *) ;;
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --depth | -d)
+            max_depth="$2"
+            shift 2
+            ;;
+        --files | -f) : ;; # always search for files now
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
         esac
     done
-
-    local find_cmd="find \"$path\""
-
-    if [[ "$files_only" == "true" ]]; then
-        find_cmd="$find_cmd -type f -empty"
-    elif [[ "$directories_only" == "true" ]]; then
-        find_cmd="$find_cmd -type d -empty"
-    else
-        find_cmd="$find_cmd -empty"
+    if [[ ! -d "$search_dir" ]]; then
+        console.error "Search directory does not exist: $search_dir"
+        return 1
     fi
-
-    local results=()
     local count=0
-    while IFS= read -r -d '' item && [[ $count -lt $max_results ]]; do
-        results+=("$item")
-        ((count++))
-    done < <(eval "$find_cmd -print0" 2>/dev/null)
-
-    if [[ ${#results[@]} -eq 0 ]]; then
-        console.info "No empty items found in $path"
-        return 0
-    fi
-
-    console.info "Found ${#results[@]} empty items:"
-    for item in "${results[@]}"; do
-        local relative_path="${item#$path/}"
-        if [[ -d "$item" ]]; then
-            console.info "  📁 $relative_path (empty directory)"
-        else
-            console.info "  📄 $relative_path (empty file)"
+    while IFS= read -r -d '' dir; do
+        if [[ -z "$(ls -A "$dir" 2>/dev/null)" ]]; then
+            echo "📁 Empty directory: $dir"
+            ((count++))
         fi
-    done
+    done < <(find "$search_dir" -maxdepth "$max_depth" -type d -print0 2>/dev/null)
+    while IFS= read -r -d '' file; do
+        if [[ ! -s "$file" ]]; then
+            echo "📄 Empty file: $file"
+            ((count++))
+        fi
+    done < <(find "$search_dir" -maxdepth "$max_depth" -type f -print0 2>/dev/null)
+    echo "empty items found"
+    if [[ $count -gt 0 ]]; then
+        console.success "Found $count empty items"
+    fi
 }
 
 # Internal helper functions
@@ -682,37 +642,34 @@ function directory.__permissions_to_description() {
 }
 
 function directory.__display_simple() {
-    local items=("$@")
-    for item in "${items[@]}"; do
-        local name=$(basename "$item")
-        if [[ -d "$item" ]]; then
-            echo "📁 $name"
-        elif [[ -L "$item" ]]; then
-            echo "🔗 $name"
-        else
-            echo "📄 $name"
-        fi
-    done
+    local item="$1"
+    local type="$2"
+    if [[ -d "$item" ]]; then
+        echo "📁 $item"
+    elif [[ -L "$item" ]]; then
+        echo "🔗 $item"
+    else
+        echo "📄 $item"
+    fi
 }
 
 function directory.__display_long() {
-    local items=("$@")
-    for item in "${items[@]}"; do
-        local name=$(basename "$item")
-        local permissions=$(stat -c "%A" "$item" 2>/dev/null || echo "??????")
-        local owner=$(stat -c "%U" "$item" 2>/dev/null || echo "unknown")
-        local size=$(stat -c "%s" "$item" 2>/dev/null | numfmt --to=iec 2>/dev/null || echo "0")
-        local modified=$(stat -c "%y" "$item" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
+    local item="$1"
+    local type="$2"
+    local name=$(basename "$item")
+    local permissions=$(stat -c "%A" "$item" 2>/dev/null || echo "??????")
+    local owner=$(stat -c "%U" "$item" 2>/dev/null || echo "unknown")
+    local size=$(stat -c "%s" "$item" 2>/dev/null | numfmt --to=iec 2>/dev/null || echo "0")
+    local modified=$(stat -c "%y" "$item" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
 
-        local icon="📄"
-        if [[ -d "$item" ]]; then
-            icon="📁"
-        elif [[ -L "$item" ]]; then
-            icon="🔗"
-        fi
+    local icon="📄"
+    if [[ -d "$item" ]]; then
+        icon="📁"
+    elif [[ -L "$item" ]]; then
+        icon="🔗"
+    fi
 
-        printf "%-10s %-8s %-8s %-8s %s %s\n" "$permissions" "$owner" "$size" "$modified" "$icon" "$name"
-    done
+    printf "%-10s %-8s %-8s %-8s %s %s\n" "$permissions" "$owner" "$size" "$modified" "$icon" "$name"
 }
 
 ##
@@ -721,13 +678,21 @@ function directory.__display_long() {
 ##   directory.set_depth 5
 ##
 function directory.set_depth() {
-    if [[ -n "$1" && "$1" =~ ^[0-9]+$ ]]; then
-        __DIR__DEFAULT_DEPTH="$1"
-        console.info "Default search depth set to ${__DIR__DEFAULT_DEPTH}"
-    else
-        console.error "Invalid depth value. Must be a positive integer."
+    local depth="$1"
+
+    if [[ -z "$depth" ]]; then
+        console.error "No depth value specified"
         return 1
     fi
+
+    if [[ ! "$depth" =~ ^[0-9]+$ ]]; then
+        console.error "Depth must be a positive integer"
+        return 1
+    fi
+
+    __DIR__DEFAULT_DEPTH="$depth"
+    echo "Default search depth set to $depth"
+    console.success "Default search depth set to $depth"
 }
 
 ##
@@ -736,13 +701,21 @@ function directory.set_depth() {
 ##   directory.set_max_results 50
 ##
 function directory.set_max_results() {
-    if [[ -n "$1" && "$1" =~ ^[0-9]+$ ]]; then
-        __DIR__DEFAULT_MAX_RESULTS="$1"
-        console.info "Default max results set to ${__DIR__DEFAULT_MAX_RESULTS}"
-    else
-        console.error "Invalid max results value. Must be a positive integer."
+    local max="$1"
+
+    if [[ -z "$max" ]]; then
+        console.error "No maximum value specified"
         return 1
     fi
+
+    if [[ ! "$max" =~ ^[0-9]+$ ]]; then
+        console.error "Maximum must be a positive integer"
+        return 1
+    fi
+
+    __DIR__DEFAULT_MAX_RESULTS="$max"
+    echo "Default max results set to $max"
+    console.success "Default max results set to $max"
 }
 
 ##

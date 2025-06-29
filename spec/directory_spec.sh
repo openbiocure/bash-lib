@@ -6,6 +6,7 @@ setup() {
     export BASH__PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/" && pwd)"
     source "${BASH__PATH}/lib/init.sh"
     import directory
+    import string
 }
 Before setup
 

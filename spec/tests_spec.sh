@@ -1,3 +1,10 @@
+setup() {
+    export BASH__PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/" && pwd)"
+    source "${BASH__PATH}/lib/init.sh"
+    import console
+}
+Before setup
+
 Describe 'console'
 
 It "console.log function outputs correctly"
