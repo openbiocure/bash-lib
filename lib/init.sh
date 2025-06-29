@@ -215,7 +215,6 @@ function import.meta.reload() {
 ##
 ## Allows you include libraries
 function import() {
-
   # Validate that a module name is provided
   if [[ -z "${1}" ]]; then
     echo -e "\e[31mError: \e[0mNo module name provided"
@@ -368,12 +367,12 @@ main_init() {
 
     echo "DEBUG: Script directory: $script_dir"
 
-    # Navigate up to find the bash-lib root (where lib/core/ and lib/modules/ directories exist)
+    # Navigate up to find the bash-lib root (where lib/init.sh and lib/modules/ directories exist)
     current_dir="$script_dir"
     bash_lib_root=""
 
     while [[ -n "$current_dir" ]] && [[ "$current_dir" != "/" ]]; do
-      if [[ -d "$current_dir/lib/core" ]] && [[ -d "$current_dir/lib/modules" ]]; then
+      if [[ -f "$current_dir/lib/init.sh" ]] && [[ -d "$current_dir/lib/modules" ]]; then
         bash_lib_root="$current_dir"
         break
       fi

@@ -120,8 +120,8 @@ if cp -r "$extracted_dir"/* "$BASH_LIB_PATH/"; then
     export BASH__PATH="$BASH_LIB_PATH"
 
     # Source bash-lib in current session
-    if [ -f "$BASH_LIB_PATH/lib/core/init.sh" ]; then
-        source "$BASH_LIB_PATH/lib/core/init.sh"
+    if [ -f "$BASH_LIB_PATH/lib/init.sh" ]; then
+        source "$BASH_LIB_PATH/lib/init.sh"
 
         # Verify import function is available
         if command -v import >/dev/null 2>&1; then

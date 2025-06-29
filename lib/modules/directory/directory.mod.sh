@@ -3,12 +3,9 @@
 # Directory Module for bash-lib
 # Provides comprehensive file and directory management utilities
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_directory="1"
-
 # Call import.meta.loaded if the function exists (with error suppression)
 if command -v import.meta.loaded >/dev/null 2>&1; then
-    import.meta.loaded "directory" "${BASH__PATH:-/opt/bash-lib}/modules/directory/directory.mod.sh" "1.0.0" 2>/dev/null || true
+    import.meta.loaded "directory" "${BASH__PATH:-/opt/bash-lib}/lib/modules/directory/directory.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
 import console
@@ -17,7 +14,7 @@ import string
 # Directory Module Configuration
 __DIR__DEFAULT_DEPTH=3
 __DIR__DEFAULT_MAX_RESULTS=100
-__DIR__DEFAULT_SORT_BY="name"  # name, size, date, type
+__DIR__DEFAULT_SORT_BY="name" # name, size, date, type
 
 ##
 ## (Usage) List directory contents with various options
@@ -30,12 +27,12 @@ __DIR__DEFAULT_SORT_BY="name"  # name, size, date, type
 function directory.list() {
     local path="${1:-.}"
     shift
-    
+
     if [[ ! -d "$path" ]]; then
         console.error "Directory does not exist: $path"
         return 1
     fi
-    
+
     local show_hidden=false
     local long_format=false
     local file_type=""
@@ -43,41 +40,41 @@ function directory.list() {
     local max_results="${__DIR__DEFAULT_MAX_RESULTS}"
     local sort_by="${__DIR__DEFAULT_SORT_BY}"
     local reverse_sort=false
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --all|-a) show_hidden=true ;;
-            --long|-l) long_format=true ;;
-            --type=*) file_type="${arg#*=}" ;;
-            --pattern=*) pattern="${arg#*=}" ;;
-            --max=*) max_results="${arg#*=}" ;;
-            --sort=*) sort_by="${arg#*=}" ;;
-            --reverse|-r) reverse_sort=true ;;
-            *) ;;
+        --all | -a) show_hidden=true ;;
+        --long | -l) long_format=true ;;
+        --type=*) file_type="${arg#*=}" ;;
+        --pattern=*) pattern="${arg#*=}" ;;
+        --max=*) max_results="${arg#*=}" ;;
+        --sort=*) sort_by="${arg#*=}" ;;
+        --reverse | -r) reverse_sort=true ;;
+        *) ;;
         esac
     done
-    
+
     # Build find command
     local find_cmd="find \"$path\" -maxdepth 1"
-    
+
     if [[ "$show_hidden" == "false" ]]; then
         find_cmd="$find_cmd -not -name '.*'"
     fi
-    
+
     if [[ -n "$file_type" ]]; then
         case $file_type in
-            file) find_cmd="$find_cmd -type f" ;;
-            dir|directory) find_cmd="$find_cmd -type d" ;;
-            link|symlink) find_cmd="$find_cmd -type l" ;;
-            *) ;;
+        file) find_cmd="$find_cmd -type f" ;;
+        dir | directory) find_cmd="$find_cmd -type d" ;;
+        link | symlink) find_cmd="$find_cmd -type l" ;;
+        *) ;;
         esac
     fi
-    
+
     if [[ -n "$pattern" ]]; then
         find_cmd="$find_cmd -name \"$pattern\""
     fi
-    
+
     # Execute find and process results
     local results=()
     local count=0
@@ -85,46 +82,46 @@ function directory.list() {
         results+=("$item")
         ((count++))
     done < <(eval "$find_cmd -print0" 2>/dev/null)
-    
+
     # Sort results
     if [[ ${#results[@]} -gt 0 ]]; then
         case $sort_by in
-            name)
-                if [[ "$reverse_sort" == "true" ]]; then
-                    IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | sort -r))
-                else
-                    IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | sort))
-                fi
-                ;;
-            size)
-                if [[ "$reverse_sort" == "true" ]]; then
-                    IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%s %n" {} 2>/dev/null | sort -nr | cut -d' ' -f2-))
-                else
-                    IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%s %n" {} 2>/dev/null | sort -n | cut -d' ' -f2-))
-                fi
-                ;;
-            date)
-                if [[ "$reverse_sort" == "true" ]]; then
-                    IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%Y %n" {} 2>/dev/null | sort -nr | cut -d' ' -f2-))
-                else
-                    IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%Y %n" {} 2>/dev/null | sort -n | cut -d' ' -f2-))
-                fi
-                ;;
+        name)
+            if [[ "$reverse_sort" == "true" ]]; then
+                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | sort -r))
+            else
+                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | sort))
+            fi
+            ;;
+        size)
+            if [[ "$reverse_sort" == "true" ]]; then
+                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%s %n" {} 2>/dev/null | sort -nr | cut -d' ' -f2-))
+            else
+                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%s %n" {} 2>/dev/null | sort -n | cut -d' ' -f2-))
+            fi
+            ;;
+        date)
+            if [[ "$reverse_sort" == "true" ]]; then
+                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%Y %n" {} 2>/dev/null | sort -nr | cut -d' ' -f2-))
+            else
+                IFS=$'\n' results=($(printf '%s\n' "${results[@]}" | xargs -I {} stat -c "%Y %n" {} 2>/dev/null | sort -n | cut -d' ' -f2-))
+            fi
+            ;;
         esac
     fi
-    
+
     # Display results
     if [[ ${#results[@]} -eq 0 ]]; then
         console.info "No items found in $path"
         return 0
     fi
-    
+
     if [[ "$long_format" == "true" ]]; then
         directory.__display_long "${results[@]}"
     else
         directory.__display_simple "${results[@]}"
     fi
-    
+
     console.info "Found ${#results[@]} items in $path"
 }
 
@@ -139,57 +136,57 @@ function directory.search() {
     local path="${1:-.}"
     local pattern="$2"
     shift 2
-    
+
     if [[ ! -d "$path" ]]; then
         console.error "Directory does not exist: $path"
         return 1
     fi
-    
+
     if [[ -z "$pattern" ]]; then
         console.error "Search pattern is required"
         return 1
     fi
-    
+
     local max_depth="${__DIR__DEFAULT_DEPTH}"
     local file_type=""
     local size_filter=""
     local max_results="${__DIR__DEFAULT_MAX_RESULTS}"
     local case_sensitive=true
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --depth=*) max_depth="${arg#*=}" ;;
-            --type=*) file_type="${arg#*=}" ;;
-            --size=*) size_filter="${arg#*=}" ;;
-            --max=*) max_results="${arg#*=}" ;;
-            --ignore-case|-i) case_sensitive=false ;;
-            *) ;;
+        --depth=*) max_depth="${arg#*=}" ;;
+        --type=*) file_type="${arg#*=}" ;;
+        --size=*) size_filter="${arg#*=}" ;;
+        --max=*) max_results="${arg#*=}" ;;
+        --ignore-case | -i) case_sensitive=false ;;
+        *) ;;
         esac
     done
-    
+
     # Build find command
     local find_cmd="find \"$path\" -maxdepth $max_depth"
-    
+
     if [[ "$case_sensitive" == "false" ]]; then
         find_cmd="$find_cmd -iname \"$pattern\""
     else
         find_cmd="$find_cmd -name \"$pattern\""
     fi
-    
+
     if [[ -n "$file_type" ]]; then
         case $file_type in
-            file) find_cmd="$find_cmd -type f" ;;
-            dir|directory) find_cmd="$find_cmd -type d" ;;
-            link|symlink) find_cmd="$find_cmd -type l" ;;
-            *) ;;
+        file) find_cmd="$find_cmd -type f" ;;
+        dir | directory) find_cmd="$find_cmd -type d" ;;
+        link | symlink) find_cmd="$find_cmd -type l" ;;
+        *) ;;
         esac
     fi
-    
+
     if [[ -n "$size_filter" ]]; then
         find_cmd="$find_cmd -size \"$size_filter\""
     fi
-    
+
     # Execute search
     local results=()
     local count=0
@@ -197,13 +194,13 @@ function directory.search() {
         results+=("$item")
         ((count++))
     done < <(eval "$find_cmd -print0" 2>/dev/null)
-    
+
     # Display results
     if [[ ${#results[@]} -eq 0 ]]; then
         console.info "No files found matching '$pattern' in $path"
         return 0
     fi
-    
+
     console.info "Found ${#results[@]} items matching '$pattern':"
     for item in "${results[@]}"; do
         local relative_path="${item#$path/}"
@@ -227,26 +224,26 @@ function directory.search() {
 function directory.remove() {
     local path="$1"
     shift
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     local recursive=false
     local force=false
     local pattern=""
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --recursive|-r) recursive=true ;;
-            --force|-f) force=true ;;
-            --pattern=*) pattern="${arg#*=}" ;;
-            *) ;;
+        --recursive | -r) recursive=true ;;
+        --force | -f) force=true ;;
+        --pattern=*) pattern="${arg#*=}" ;;
+        *) ;;
         esac
     done
-    
+
     if [[ -n "$pattern" ]]; then
         # Remove files matching pattern
         if [[ "$recursive" == "true" ]]; then
@@ -261,7 +258,7 @@ function directory.remove() {
             console.error "Path does not exist: $path"
             return 1
         fi
-        
+
         if [[ -d "$path" && "$recursive" == "false" ]]; then
             if [[ "$force" == "true" ]]; then
                 rm -rf "$path"
@@ -288,31 +285,31 @@ function directory.copy() {
     local source="$1"
     local destination="$2"
     shift 2
-    
+
     if [[ -z "$source" || -z "$destination" ]]; then
         console.error "Source and destination are required"
         return 1
     fi
-    
+
     if [[ ! -e "$source" ]]; then
         console.error "Source does not exist: $source"
         return 1
     fi
-    
+
     local recursive=false
     local preserve=false
     local pattern=""
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --recursive|-r) recursive=true ;;
-            --preserve|-p) preserve=true ;;
-            --pattern=*) pattern="${arg#*=}" ;;
-            *) ;;
+        --recursive | -r) recursive=true ;;
+        --preserve | -p) preserve=true ;;
+        --pattern=*) pattern="${arg#*=}" ;;
+        *) ;;
         esac
     done
-    
+
     # Create destination directory if it doesn't exist
     if [[ ! -d "$destination" ]]; then
         mkdir -p "$destination" || {
@@ -320,12 +317,12 @@ function directory.copy() {
             return 1
         }
     fi
-    
+
     if [[ -n "$pattern" ]]; then
         # Copy files matching pattern
         local cp_opts=""
         [[ "$preserve" == "true" ]] && cp_opts="$cp_opts -p"
-        
+
         if [[ "$recursive" == "true" ]]; then
             find "$source" -name "$pattern" -type f -exec cp $cp_opts {} "$destination/" \;
         else
@@ -337,7 +334,7 @@ function directory.copy() {
         local cp_opts=""
         [[ "$recursive" == "true" ]] && cp_opts="$cp_opts -r"
         [[ "$preserve" == "true" ]] && cp_opts="$cp_opts -p"
-        
+
         cp $cp_opts "$source" "$destination/" || {
             console.error "Failed to copy $source to $destination"
             return 1
@@ -355,17 +352,17 @@ function directory.copy() {
 function directory.move() {
     local source="$1"
     local destination="$2"
-    
+
     if [[ -z "$source" || -z "$destination" ]]; then
         console.error "Source and destination are required"
         return 1
     fi
-    
+
     if [[ ! -e "$source" ]]; then
         console.error "Source does not exist: $source"
         return 1
     fi
-    
+
     # Create destination directory if moving to a directory
     if [[ -d "$destination" ]]; then
         destination="$destination/$(basename "$source")"
@@ -378,12 +375,12 @@ function directory.move() {
             }
         fi
     fi
-    
+
     mv "$source" "$destination" || {
         console.error "Failed to move $source to $destination"
         return 1
     }
-    
+
     console.success "Moved $source to $destination"
 }
 
@@ -396,35 +393,35 @@ function directory.move() {
 function directory.create() {
     local path="$1"
     shift
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     local parents=false
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --parents|-p) parents=true ;;
-            *) ;;
+        --parents | -p) parents=true ;;
+        *) ;;
         esac
     done
-    
+
     if [[ -e "$path" ]]; then
         console.warn "Path already exists: $path"
         return 0
     fi
-    
+
     local mkdir_opts=""
     [[ "$parents" == "true" ]] && mkdir_opts="$mkdir_opts -p"
-    
+
     mkdir $mkdir_opts "$path" || {
         console.error "Failed to create directory: $path"
         return 1
     }
-    
+
     console.success "Created directory: $path"
 }
 
@@ -437,34 +434,34 @@ function directory.create() {
 function directory.info() {
     local path="$1"
     shift
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ ! -e "$path" ]]; then
         console.error "Path does not exist: $path"
         return 1
     fi
-    
+
     local detailed=false
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --detailed|-d) detailed=true ;;
-            *) ;;
+        --detailed | -d) detailed=true ;;
+        *) ;;
         esac
     done
-    
+
     local name=$(basename "$path")
     local type=""
     local size=""
     local permissions=""
     local owner=""
     local modified=""
-    
+
     if [[ -d "$path" ]]; then
         type="Directory"
         size=$(du -sh "$path" 2>/dev/null | cut -f1)
@@ -475,11 +472,11 @@ function directory.info() {
         type="File"
         size=$(stat -c "%s" "$path" 2>/dev/null | numfmt --to=iec 2>/dev/null || echo "Unknown")
     fi
-    
+
     permissions=$(stat -c "%A" "$path" 2>/dev/null || echo "Unknown")
     owner=$(stat -c "%U:%G" "$path" 2>/dev/null || echo "Unknown")
     modified=$(stat -c "%y" "$path" 2>/dev/null || echo "Unknown")
-    
+
     console.info "File Information:"
     console.info "  Name: $name"
     console.info "  Type: $type"
@@ -488,16 +485,16 @@ function directory.info() {
     console.info "  Permissions Description: $(directory.__permissions_to_description "$permissions")"
     console.info "  Owner: $owner"
     console.info "  Modified: $modified"
-    
+
     if [[ "$detailed" == "true" ]]; then
         local inode=$(stat -c "%i" "$path" 2>/dev/null || echo "Unknown")
         local hard_links=$(stat -c "%h" "$path" 2>/dev/null || echo "Unknown")
         local device=$(stat -c "%D" "$path" 2>/dev/null || echo "Unknown")
-        
+
         console.info "  Inode: $inode"
         console.info "  Hard Links: $hard_links"
         console.info "  Device: $device"
-        
+
         if [[ -L "$path" ]]; then
             local target=$(readlink "$path")
             console.info "  Target: $target"
@@ -514,34 +511,34 @@ function directory.info() {
 function directory.size() {
     local path="$1"
     shift
-    
+
     if [[ -z "$path" ]]; then
         console.error "Path is required"
         return 1
     fi
-    
+
     if [[ ! -d "$path" ]]; then
         console.error "Path is not a directory: $path"
         return 1
     fi
-    
+
     local human_readable=true
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --bytes|-b) human_readable=false ;;
-            *) ;;
+        --bytes | -b) human_readable=false ;;
+        *) ;;
         esac
     done
-    
+
     local size
     if [[ "$human_readable" == "true" ]]; then
         size=$(du -sh "$path" 2>/dev/null | cut -f1)
     else
         size=$(du -sb "$path" 2>/dev/null | cut -f1)
     fi
-    
+
     if [[ -n "$size" ]]; then
         console.info "Directory size: $size"
         echo "$size"
@@ -561,26 +558,26 @@ function directory.size() {
 function directory.find_empty() {
     local path="${1:-.}"
     shift
-    
+
     if [[ ! -d "$path" ]]; then
         console.error "Directory does not exist: $path"
         return 1
     fi
-    
+
     local files_only=false
     local directories_only=false
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --files-only|-f) files_only=true ;;
-            --directories-only|-d) directories_only=true ;;
-            *) ;;
+        --files-only | -f) files_only=true ;;
+        --directories-only | -d) directories_only=true ;;
+        *) ;;
         esac
     done
-    
+
     local find_cmd="find \"$path\""
-    
+
     if [[ "$files_only" == "true" ]]; then
         find_cmd="$find_cmd -type f -empty"
     elif [[ "$directories_only" == "true" ]]; then
@@ -588,19 +585,19 @@ function directory.find_empty() {
     else
         find_cmd="$find_cmd -empty"
     fi
-    
+
     local results=()
     local count=0
     while IFS= read -r -d '' item && [[ $count -lt $max_results ]]; do
         results+=("$item")
         ((count++))
     done < <(eval "$find_cmd -print0" 2>/dev/null)
-    
+
     if [[ ${#results[@]} -eq 0 ]]; then
         console.info "No empty items found in $path"
         return 0
     fi
-    
+
     console.info "Found ${#results[@]} empty items:"
     for item in "${results[@]}"; do
         local relative_path="${item#$path/}"
@@ -616,71 +613,71 @@ function directory.find_empty() {
 
 function directory.__permissions_to_description() {
     local permissions="$1"
-    
+
     if [[ -z "$permissions" || "$permissions" == "Unknown" ]]; then
         echo "Unknown permissions"
         return
     fi
-    
+
     local description=""
-    
+
     # File type
     case ${permissions:0:1} in
-        "-") description="Regular file" ;;
-        "d") description="Directory" ;;
-        "l") description="Symbolic link" ;;
-        "c") description="Character device" ;;
-        "b") description="Block device" ;;
-        "p") description="Named pipe" ;;
-        "s") description="Socket" ;;
-        *) description="Unknown type" ;;
+    "-") description="Regular file" ;;
+    "d") description="Directory" ;;
+    "l") description="Symbolic link" ;;
+    "c") description="Character device" ;;
+    "b") description="Block device" ;;
+    "p") description="Named pipe" ;;
+    "s") description="Socket" ;;
+    *) description="Unknown type" ;;
     esac
-    
+
     description="$description with permissions: "
-    
+
     # Owner permissions
     case ${permissions:1:3} in
-        "rwx") description="${description}owner can read, write, and execute" ;;
-        "rw-") description="${description}owner can read and write" ;;
-        "r-x") description="${description}owner can read and execute" ;;
-        "r--") description="${description}owner can read only" ;;
-        "-wx") description="${description}owner can write and execute" ;;
-        "-w-") description="${description}owner can write only" ;;
-        "--x") description="${description}owner can execute only" ;;
-        "---") description="${description}owner has no permissions" ;;
-        *) description="${description}owner has unusual permissions" ;;
+    "rwx") description="${description}owner can read, write, and execute" ;;
+    "rw-") description="${description}owner can read and write" ;;
+    "r-x") description="${description}owner can read and execute" ;;
+    "r--") description="${description}owner can read only" ;;
+    "-wx") description="${description}owner can write and execute" ;;
+    "-w-") description="${description}owner can write only" ;;
+    "--x") description="${description}owner can execute only" ;;
+    "---") description="${description}owner has no permissions" ;;
+    *) description="${description}owner has unusual permissions" ;;
     esac
-    
+
     description="$description; "
-    
+
     # Group permissions
     case ${permissions:4:3} in
-        "rwx") description="${description}group can read, write, and execute" ;;
-        "rw-") description="${description}group can read and write" ;;
-        "r-x") description="${description}group can read and execute" ;;
-        "r--") description="${description}group can read only" ;;
-        "-wx") description="${description}group can write and execute" ;;
-        "-w-") description="${description}group can write only" ;;
-        "--x") description="${description}group can execute only" ;;
-        "---") description="${description}group has no permissions" ;;
-        *) description="${description}group has unusual permissions" ;;
+    "rwx") description="${description}group can read, write, and execute" ;;
+    "rw-") description="${description}group can read and write" ;;
+    "r-x") description="${description}group can read and execute" ;;
+    "r--") description="${description}group can read only" ;;
+    "-wx") description="${description}group can write and execute" ;;
+    "-w-") description="${description}group can write only" ;;
+    "--x") description="${description}group can execute only" ;;
+    "---") description="${description}group has no permissions" ;;
+    *) description="${description}group has unusual permissions" ;;
     esac
-    
+
     description="$description; "
-    
+
     # Others permissions
     case ${permissions:7:3} in
-        "rwx") description="${description}others can read, write, and execute" ;;
-        "rw-") description="${description}others can read and write" ;;
-        "r-x") description="${description}others can read and execute" ;;
-        "r--") description="${description}others can read only" ;;
-        "-wx") description="${description}others can write and execute" ;;
-        "-w-") description="${description}others can write only" ;;
-        "--x") description="${description}others can execute only" ;;
-        "---") description="${description}others have no permissions" ;;
-        *) description="${description}others have unusual permissions" ;;
+    "rwx") description="${description}others can read, write, and execute" ;;
+    "rw-") description="${description}others can read and write" ;;
+    "r-x") description="${description}others can read and execute" ;;
+    "r--") description="${description}others can read only" ;;
+    "-wx") description="${description}others can write and execute" ;;
+    "-w-") description="${description}others can write only" ;;
+    "--x") description="${description}others can execute only" ;;
+    "---") description="${description}others have no permissions" ;;
+    *) description="${description}others have unusual permissions" ;;
     esac
-    
+
     echo "$description"
 }
 
@@ -706,14 +703,14 @@ function directory.__display_long() {
         local owner=$(stat -c "%U" "$item" 2>/dev/null || echo "unknown")
         local size=$(stat -c "%s" "$item" 2>/dev/null | numfmt --to=iec 2>/dev/null || echo "0")
         local modified=$(stat -c "%y" "$item" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
-        
+
         local icon="📄"
         if [[ -d "$item" ]]; then
             icon="📁"
         elif [[ -L "$item" ]]; then
             icon="🔗"
         fi
-        
+
         printf "%-10s %-8s %-8s %-8s %s %s\n" "$permissions" "$owner" "$size" "$modified" "$icon" "$name"
     done
 }
@@ -819,3 +816,5 @@ Examples:
   directory.find_empty ~/temp --files-only
 EOF
 }
+
+export BASH_LIB_IMPORTED_directory="1"

@@ -3,9 +3,6 @@
 # HTTP Module for bash-lib
 # Provides comprehensive HTTP client functionality
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_http="1"
-
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
     import.meta.loaded "http" "${BASH__PATH:-/opt/bash-lib}/modules/http/http.mod.sh" "1.0.0" 2>/dev/null || true
@@ -69,26 +66,26 @@ function http.download() {
     local url="$1"
     local output_path="$2"
     shift 2
-    
+
     if [[ -z "$url" || -z "$output_path" ]]; then
         console.error "Usage: http.download <url> <output_path> [options]"
         return 1
     fi
-    
+
     local retries="${__HTTP__DEFAULT_RETRIES}"
     local timeout="${__HTTP__DEFAULT_TIMEOUT}"
     local headers=()
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --retries=*) retries="${arg#*=}" ;;
-            --timeout=*) timeout="${arg#*=}" ;;
-            --header=*) headers+=("${arg#*=}") ;;
-            *) ;;
+        --retries=*) retries="${arg#*=}" ;;
+        --timeout=*) timeout="${arg#*=}" ;;
+        --header=*) headers+=("${arg#*=}") ;;
+        *) ;;
         esac
     done
-    
+
     # Create output directory if it doesn't exist
     local output_dir=$(dirname "$output_path")
     if [[ ! -d "$output_dir" ]]; then
@@ -97,11 +94,11 @@ function http.download() {
             return 1
         }
     fi
-    
+
     local attempt=1
     while [[ $attempt -le $retries ]]; do
         console.info "Downloading $url (attempt $attempt/$retries)"
-        
+
         local curl_opts=(
             "--silent"
             "--show-error"
@@ -110,15 +107,15 @@ function http.download() {
             "--output" "$output_path"
             "--write-out" "HTTPSTATUS:%{http_code}"
         )
-        
+
         # Add headers
         for header in "${headers[@]}"; do
             curl_opts+=("--header" "$header")
         done
-        
+
         local response=$(curl "${curl_opts[@]}" "$url" 2>&1)
         local http_status=$(echo "$response" | grep -o 'HTTPSTATUS:[0-9]*' | cut -d: -f2)
-        
+
         if [[ $? -eq 0 && "$http_status" =~ ^[23][0-9][0-9]$ ]]; then
             console.success "Download completed successfully (HTTP $http_status)"
             return 0
@@ -129,10 +126,10 @@ function http.download() {
                 sleep "${__HTTP__DEFAULT_RETRY_DELAY}"
             fi
         fi
-        
+
         ((attempt++))
     done
-    
+
     console.error "Download failed after $retries attempts"
     return 1
 }
@@ -146,25 +143,25 @@ function http.download() {
 function http.check() {
     local url="$1"
     shift
-    
+
     if [[ -z "$url" ]]; then
         console.error "Usage: http.check <url> [options]"
         return 1
     fi
-    
+
     local timeout="${__HTTP__DEFAULT_TIMEOUT}"
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --timeout=*) timeout="${arg#*=}" ;;
-            *) ;;
+        --timeout=*) timeout="${arg#*=}" ;;
+        *) ;;
         esac
     done
-    
+
     local http_status=$(curl --silent --show-error --location --max-time "$timeout" \
         --write-out "%{http_code}" --output /dev/null "$url" 2>/dev/null)
-    
+
     if [[ "$http_status" =~ ^[23][0-9][0-9]$ ]]; then
         console.success "URL is accessible (HTTP $http_status)"
         return 0
@@ -182,12 +179,12 @@ function http.check() {
 ##
 function http.status() {
     local url="$1"
-    
+
     if [[ -z "$url" ]]; then
         console.error "Usage: http.status <url>"
         return 1
     fi
-    
+
     curl --silent --show-error --location --max-time "${__HTTP__DEFAULT_TIMEOUT}" \
         --write-out "%{http_code}" --output /dev/null "$url" 2>/dev/null
 }
@@ -223,22 +220,22 @@ function http.is_200() {
 function http.headers() {
     local url="$1"
     shift
-    
+
     if [[ -z "$url" ]]; then
         console.error "Usage: http.headers <url> [options]"
         return 1
     fi
-    
+
     local headers=()
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --header=*) headers+=("${arg#*=}") ;;
-            *) ;;
+        --header=*) headers+=("${arg#*=}") ;;
+        *) ;;
         esac
     done
-    
+
     local curl_opts=(
         "--silent"
         "--show-error"
@@ -246,12 +243,12 @@ function http.headers() {
         "--max-time" "${__HTTP__DEFAULT_TIMEOUT}"
         "--head"
     )
-    
+
     # Add headers
     for header in "${headers[@]}"; do
         curl_opts+=("--header" "$header")
     done
-    
+
     curl "${curl_opts[@]}" "$url" 2>/dev/null
 }
 
@@ -260,32 +257,32 @@ function http.__request() {
     local method="$1"
     local url="$2"
     shift 2
-    
+
     if [[ -z "$url" ]]; then
         console.error "Usage: http.$method <url> [options]"
         return 1
     fi
-    
+
     local timeout="${__HTTP__DEFAULT_TIMEOUT}"
     local headers=()
     local data=""
     local data_urlencode=()
     local insecure=false
     local show_status=false
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --timeout=*) timeout="${arg#*=}" ;;
-            --header=*) headers+=("${arg#*=}") ;;
-            --data=*) data="${arg#*=}" ;;
-            --data-urlencode=*) data_urlencode+=("${arg#*=}") ;;
-            --insecure) insecure=true ;;
-            --show-status) show_status=true ;;
-            *) ;;
+        --timeout=*) timeout="${arg#*=}" ;;
+        --header=*) headers+=("${arg#*=}") ;;
+        --data=*) data="${arg#*=}" ;;
+        --data-urlencode=*) data_urlencode+=("${arg#*=}") ;;
+        --insecure) insecure=true ;;
+        --show-status) show_status=true ;;
+        *) ;;
         esac
     done
-    
+
     # Build curl command
     local curl_opts=(
         "--silent"
@@ -294,32 +291,32 @@ function http.__request() {
         "--max-time" "$timeout"
         "--request" "$method"
     )
-    
+
     # Add insecure flag if requested
     if [[ "$insecure" == "true" ]]; then
         curl_opts+=("--insecure")
     fi
-    
+
     # Add headers
     for header in "${headers[@]}"; do
         curl_opts+=("--header" "$header")
     done
-    
+
     # Add data
     if [[ -n "$data" ]]; then
         curl_opts+=("--data" "$data")
     fi
-    
+
     # Add URL-encoded data
     for item in "${data_urlencode[@]}"; do
         curl_opts+=("--data-urlencode" "$item")
     done
-    
+
     # Add status code output if requested
     if [[ "$show_status" == "true" ]]; then
         curl_opts+=("--write-out" "HTTPSTATUS:%{http_code}")
     fi
-    
+
     # Execute request
     local response
     if [[ "$show_status" == "true" ]]; then
@@ -402,3 +399,6 @@ Examples:
   if http.is_200 https://example.com; then echo "Site is up"; fi
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_http="1"

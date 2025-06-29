@@ -3,9 +3,6 @@
 # forEach Module for bash-lib
 # Provides iteration utilities for arrays, files, and collections
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_forEach="1"
-
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
     import.meta.loaded "forEach" "${BASH__PATH:-/opt/bash-lib}/modules/utils/forEach.mod.sh" "1.0.0" 2>/dev/null || true
@@ -591,3 +588,6 @@ Examples:
   forEach.array "num" "echo \$((num * 2))" {1..10} --silent
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_forEach="1"

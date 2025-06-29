@@ -3,12 +3,9 @@
 # File Module for bash-lib
 # Provides comprehensive file management and manipulation utilities
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_files="1"
-
-# Call import.meta.loaded if the function exists (with error suppression)
+# Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
-    import.meta.loaded "file" "${BASH__PATH:-/opt/bash-lib}/modules/file/file.mod.sh" "1.0.0" 2>/dev/null || true
+    import.meta.loaded "file" "${BASH__PATH:-/opt/bash-lib}/lib/modules/file/file.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
 import console
@@ -891,3 +888,6 @@ Examples:
   file.validate "script.sh" --exists --executable --break-on-error
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_files="1"

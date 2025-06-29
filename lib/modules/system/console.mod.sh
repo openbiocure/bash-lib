@@ -5,12 +5,10 @@
 
 exec 3>&1
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_console="1"
 
-# Call import.meta.loaded if the function exists (with error suppression)
+# Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
-    import.meta.loaded "console" "${BASH__PATH:-/opt/bash-lib}/modules/system/console.mod.sh" "1.0.0" 2>/dev/null || true
+    import.meta.loaded "console" "${BASH__PATH:-/opt/bash-lib}/lib/modules/system/console.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
 import "colors" "inc"
@@ -33,7 +31,7 @@ __console__detect_shell() {
 # Get current script name
 __console__get_script_name() {
     local shell_name=$(__console__detect_shell)
-    
+
     case $shell_name in
         "zsh")
             echo "${(%):-%N}"
@@ -54,7 +52,7 @@ __console__get_script_name() {
 # Get source file name for logging
 __console__get_source_file() {
     local shell_name=$(__console__detect_shell)
-    
+
     case $shell_name in
         "bash")
             if command -v caller >/dev/null 2>&1; then
@@ -76,18 +74,18 @@ __console__get_source_file() {
 __console__should_log() {
     local requested_log_type="$1"
     local verbose="${BASH__VERBOSE:-$__CONSOLE__DEFAULT_VERBOSITY}"
-    
+
     # Convert to lowercase for comparison
     verbose=$(echo "$verbose" | tr '[:upper:]' '[:lower:]')
     requested_log_type=$(echo "$requested_log_type" | tr '[:upper:]' '[:lower:]')
-    
+
     # Always log these types
     case $requested_log_type in
         log|fatal|warn|error|success)
             return 0
             ;;
     esac
-    
+
     # Check verbosity for these types
     case $requested_log_type in
         trace|debug|info)
@@ -96,7 +94,7 @@ __console__should_log() {
             fi
             ;;
     esac
-    
+
     return 1
 }
 
@@ -106,22 +104,22 @@ __console__log() {
     local color="$2"
     local message="$3"
     local line_no="$4"
-    
+
     # Check if we should log this message
     if ! __console__should_log "$log_type"; then
         return 0
     fi
-    
+
     # Get logging metadata
     local log_date=$(date "$__CONSOLE__TIME__FORMAT")
     local host_name=$(hostname)
     local script=$(__console__get_script_name)
     local source_file=$(__console__get_source_file)
     local color_off="${Color_Off}"
-    
+
     # Build log template
     local template="${color}${log_date} - ${host_name} - ${script} - [${log_type}]:${color_off}"
-    
+
     # Output the log message to stdout for better test compatibility
     echo -e "${template} ${message}"
 }
@@ -130,49 +128,49 @@ __console__log() {
 console.log() {
     local message="$*"
     local line_no=$LINENO
-    
+
     __console__log "LOG" "${Color_Off}" "$message" "$line_no"
 }
 
 console.info() {
     local message="$*"
     local line_no=$LINENO
-    
+
     __console__log "INFO" "${Color_Off}" "$message" "$line_no"
 }
 
 console.debug() {
     local message="$*"
     local line_no=$LINENO
-    
+
     __console__log "DEBUG" "${BCyan}" "$message" "$line_no"
 }
 
 console.trace() {
     local message="$*"
     local line_no=$LINENO
-    
+
     __console__log "TRACE" "${BYellow}" "$message" "$line_no"
 }
 
 console.warn() {
     local message="$*"
     local line_no=$LINENO
-    
+
     __console__log "WARN" "${BYellow}" "$message" "$line_no"
 }
 
 console.error() {
     local message="$*"
     local line_no=$LINENO
-    
+
     __console__log "ERROR" "${BRed}" "$message" "$line_no"
 }
 
 console.fatal() {
     local message="$*"
     local line_no=$LINENO
-    
+
     __console__log "FATAL" "${BRed}" "$message" "$line_no"
 }
 
@@ -244,3 +242,6 @@ Examples:
   console.error "Failed to connect to database"
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_console="1"

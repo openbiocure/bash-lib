@@ -67,8 +67,8 @@ add_to_shell_profile() {
     fi
 
     # Add source for init.sh
-    if ! grep -q "source $BASH_LIB_PATH/lib/core/init.sh" "$SHELL_PROFILE" 2>/dev/null; then
-        echo "source $BASH_LIB_PATH/lib/core/init.sh" >>"$SHELL_PROFILE"
+    if ! grep -q "source $BASH_LIB_PATH/lib/init.sh" "$SHELL_PROFILE" 2>/dev/null; then
+        echo "source $BASH_LIB_PATH/lib/init.sh" >>"$SHELL_PROFILE"
     fi
 
     # Also add to .bash_profile if it exists and is different
@@ -76,8 +76,8 @@ add_to_shell_profile() {
         if ! grep -q "export BASH__PATH=$BASH_LIB_PATH" "$BASH_PROFILE" 2>/dev/null; then
             echo "export BASH__PATH=$BASH_LIB_PATH" >>"$BASH_PROFILE"
         fi
-        if ! grep -q "source $BASH_LIB_PATH/lib/core/init.sh" "$BASH_PROFILE" 2>/dev/null; then
-            echo "source $BASH_LIB_PATH/lib/core/init.sh" >>"$BASH_PROFILE"
+        if ! grep -q "source $BASH_LIB_PATH/lib/init.sh" "$BASH_PROFILE" 2>/dev/null; then
+            echo "source $BASH_LIB_PATH/lib/init.sh" >>"$BASH_PROFILE"
         fi
     fi
 }
@@ -85,8 +85,8 @@ add_to_shell_profile() {
 # Source bash-lib in current session
 source_bash_lib() {
     export BASH__PATH="$BASH_LIB_PATH"
-    if [ -f "$BASH_LIB_PATH/lib/core/init.sh" ]; then
-        source "$BASH_LIB_PATH/lib/core/init.sh"
+    if [ -f "$BASH_LIB_PATH/lib/init.sh" ]; then
+        source "$BASH_LIB_PATH/lib/init.sh"
 
         # Verify import function is available
         if command -v import >/dev/null 2>&1; then

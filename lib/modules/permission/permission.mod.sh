@@ -3,9 +3,6 @@
 # Permissions Module for bash-lib
 # Provides user-friendly file and directory permission management
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_permission="1"
-
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
     import.meta.loaded "permission" "${BASH__PATH:-/opt/bash-lib}/modules/permission/permission.mod.sh" "1.0.0" 2>/dev/null || true
@@ -435,3 +432,6 @@ Examples:
   permission.check_execute /path/to/file
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_permission="1"

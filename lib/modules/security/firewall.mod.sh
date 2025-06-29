@@ -3,9 +3,6 @@
 # Firewall Module for bash-lib
 # Provides unified firewall management across different backends
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_firewall="1"
-
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
     import.meta.loaded "firewall" "${BASH__PATH:-/opt/bash-lib}/modules/security/firewall.mod.sh" "1.0.0" 2>/dev/null || true
@@ -800,3 +797,6 @@ Examples:
   firewall.reset --confirm
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_firewall="1"

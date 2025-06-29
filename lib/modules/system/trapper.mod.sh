@@ -3,12 +3,9 @@
 # Trapper Module for bash-lib
 # Provides comprehensive signal handling and error trapping functionality for all modules
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_trapper="1"
-
-# Call import.meta.loaded if the function exists (with error suppression)
+# Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
-    import.meta.loaded "trapper" "${BASH__PATH:-/opt/bash-lib}/modules/system/trapper.mod.sh" "1.0.0" 2>/dev/null || true
+    import.meta.loaded "trapper" "${BASH__PATH:-/opt/bash-lib}/lib/modules/system/trapper.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
 import console
@@ -50,18 +47,18 @@ function trapper.addModuleTrap() {
     local module="$1"
     local cmd="$2"
     shift 2
-    
+
     if [[ -z "$module" || -z "$cmd" ]]; then
         console.error "Module name and command are required"
         return 1
     fi
-    
+
     # Register module trap
     MODULE_TRAPS["$module"]="${MODULE_TRAPS[$module]:-} $cmd"
-    
+
     # Add to global trap system
     trapper.addTrap "$cmd" "$@"
-    
+
     console.debug "Added trap for module '$module': $cmd"
 }
 
@@ -74,27 +71,27 @@ function trapper.addModuleTrap() {
 function trapper.removeTrap() {
     local cmd="$1"
     local sig="$2"
-    
+
     if [[ -z "$cmd" || -z "$sig" ]]; then
         console.error "Command and signal are required"
         return 1
     fi
-    
+
     # Get current traps for this signal
     local current_traps=$(trapper.getTraps "$sig")
-    
+
     # Remove the specific command
     local new_traps=$(echo "$current_traps" | sed "s/$cmd//g" | sed 's/;;/;/g' | sed 's/^;//' | sed 's/;$//')
-    
+
     if [[ -n "$new_traps" ]]; then
         trap "$new_traps" "$sig"
     else
         trap - "$sig"
     fi
-    
+
     # Remove from registry
     TRAP_REGISTRY["$sig"]=$(echo "${TRAP_REGISTRY[$sig]}" | sed "s/$cmd//g")
-    
+
     console.debug "Removed trap: $cmd for signal $sig"
 }
 
@@ -106,12 +103,12 @@ function trapper.removeTrap() {
 ##
 function trapper.removeModuleTraps() {
     local module="$1"
-    
+
     if [[ -z "$module" ]]; then
         console.error "Module name is required"
         return 1
     fi
-    
+
     local module_traps="${MODULE_TRAPS[$module]}"
     if [[ -n "$module_traps" ]]; then
         for trap_cmd in $module_traps; do
@@ -121,10 +118,10 @@ function trapper.removeModuleTraps() {
             trapper.removeTrap "$trap_cmd" TERM
             trapper.removeTrap "$trap_cmd" ERR
         done
-        
+
         # Clear module registry
         unset MODULE_TRAPS["$module"]
-        
+
         console.debug "Removed all traps for module '$module'"
     else
         console.debug "No traps found for module '$module'"
@@ -143,7 +140,7 @@ function trapper.getTraps() {
         console.error "Signal is required"
         return 1
     fi
-    
+
     echo $(trap | grep "$sig" | sed -e "s/$'\n'/ ; /g")
 }
 
@@ -159,7 +156,7 @@ function trapper.filterTraps() {
         console.error "Command is required"
         return 1
     fi
-    
+
     echo $(trap | grep "$cmd" | sed -e "s/$'\n'/ ; /g")
 }
 
@@ -171,15 +168,15 @@ function trapper.filterTraps() {
 ##
 function trapper.list() {
     local module_filter=""
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --module=*) module_filter="${arg#*=}" ;;
-            *) ;;
+        --module=*) module_filter="${arg#*=}" ;;
+        *) ;;
         esac
     done
-    
+
     if [[ -n "$module_filter" ]]; then
         console.info "Traps for module '$module_filter':"
         local module_traps="${MODULE_TRAPS[$module_filter]}"
@@ -198,7 +195,7 @@ function trapper.list() {
                 console.info "  Signal $sig: $traps"
             fi
         done
-        
+
         console.info ""
         console.info "Module-specific traps:"
         for module in "${!MODULE_TRAPS[@]}"; do
@@ -216,15 +213,15 @@ function trapper.list() {
 ##
 function trapper.clear() {
     local module_filter=""
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --module=*) module_filter="${arg#*=}" ;;
-            *) ;;
+        --module=*) module_filter="${arg#*=}" ;;
+        *) ;;
         esac
     done
-    
+
     if [[ -n "$module_filter" ]]; then
         trapper.removeModuleTraps "$module_filter"
     else
@@ -244,20 +241,20 @@ function trapper.clear() {
 ##
 function trapper.setupDefaults() {
     local verbose=false
-    
+
     # Parse options
     for arg in "$@"; do
         case $arg in
-            --verbose|-v) verbose=true ;;
-            *) ;;
+        --verbose | -v) verbose=true ;;
+        *) ;;
         esac
     done
-    
+
     # Set up common error handling
     trapper.addTrap 'trapper.handleExit' EXIT
     trapper.addTrap 'trapper.handleInterrupt' INT TERM
     trapper.addTrap 'trapper.handleError' ERR
-    
+
     if [[ "$verbose" == "true" ]]; then
         console.info "Default error handling configured"
     fi
@@ -268,7 +265,7 @@ function trapper.setupDefaults() {
 ##
 function trapper.handleExit() {
     local exit_code=$?
-    
+
     # Run cleanup for all modules
     for module in "${!MODULE_TRAPS[@]}"; do
         local module_traps="${MODULE_TRAPS[$module]}"
@@ -278,7 +275,7 @@ function trapper.handleExit() {
             fi
         done
     done
-    
+
     if [[ $exit_code -ne 0 ]]; then
         console.error "Script exited with code: $exit_code"
     fi
@@ -289,7 +286,7 @@ function trapper.handleExit() {
 ##
 function trapper.handleInterrupt() {
     console.warn "Received interrupt signal, cleaning up..."
-    
+
     # Run interrupt handlers for all modules
     for module in "${!MODULE_TRAPS[@]}"; do
         local module_traps="${MODULE_TRAPS[$module]}"
@@ -299,7 +296,7 @@ function trapper.handleInterrupt() {
             fi
         done
     done
-    
+
     exit 1
 }
 
@@ -310,9 +307,9 @@ function trapper.handleError() {
     local exit_code=$?
     local line_number=${BASH_LINENO[0]}
     local script_name=${BASH_SOURCE[1]}
-    
+
     console.error "Error occurred in $script_name at line $line_number (exit code: $exit_code)"
-    
+
     # Run error handlers for all modules
     for module in "${!MODULE_TRAPS[@]}"; do
         local module_traps="${MODULE_TRAPS[$module]}"
@@ -376,22 +373,25 @@ Options:
 Examples:
   # Basic trap
   trapper.addTrap 'echo "Exiting..."' EXIT
-  
+
   # Module-specific trap
   trapper.addModuleTrap "http" 'http.cleanup' EXIT
   trapper.addModuleTrap "file" 'file.cleanup_temp' INT TERM
-  
+
   # Temporary resources with auto-cleanup
   temp_file=\$(trapper.tempFile)
   temp_dir=\$(trapper.tempDir)
-  
+
   # List and manage traps
   trapper.list
   trapper.list --module="http"
   trapper.removeModuleTraps "file"
   trapper.clear
-  
+
   # Set up default error handling
   trapper.setupDefaults --verbose
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_trapper="1"

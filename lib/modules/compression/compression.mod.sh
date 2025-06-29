@@ -3,9 +3,6 @@
 # Compressions Module for bash-lib
 # Provides file compression and extraction utilities
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_compression="1"
-
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
     import.meta.loaded "compression" "${BASH__PATH:-/opt/bash-lib}/modules/compressions/compression.mod.sh" "1.0.0" 2>/dev/null || true
@@ -16,7 +13,7 @@ import string
 import directory
 import exceptionBase
 
-[[ $BASH__DEBUG && $(basename "$ENTRY__POINT") == "$(basename $0)" ]] && source ./core/init.sh
+[[ $BASH__DEBUG && $(basename "$ENTRY__POINT") == "$(basename $0)" ]] && source ./lib/init.sh
 
 ##
 ## (Usage)
@@ -169,3 +166,6 @@ Examples:
   compression.unzip archive.zip /tmp/extracted
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_compression="1"

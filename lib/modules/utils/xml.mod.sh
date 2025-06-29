@@ -3,9 +3,6 @@
 # XML Module for bash-lib
 # Provides XML parsing, validation, and manipulation utilities
 
-# Module import signal using scoped naming
-export BASH_LIB_IMPORTED_xml="1"
-
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
     import.meta.loaded "xml" "${BASH__PATH:-/opt/bash-lib}/modules/utils/xml.mod.sh" "1.0.0" 2>/dev/null || true
@@ -606,3 +603,6 @@ Examples:
   xml.add_property config.xml "hive.server2.port" "10000" --description="Server port"
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_xml="1"

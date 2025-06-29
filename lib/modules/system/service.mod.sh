@@ -602,3 +602,6 @@ Examples:
   service.list --verbose
 EOF
 }
+
+# Module import signal using scoped naming
+export BASH_LIB_IMPORTED_service="1"
