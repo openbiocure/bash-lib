@@ -4,7 +4,7 @@ This guide addresses the specific issue where bash-lib fails silently during ini
 
 ## Issue Summary
 
-**Problem**: `source ${BASH__PATH}/core/init.sh` fails silently with exit code 1 in Docker containers, particularly on ARM64 platforms.
+**Problem**: `source ${BASH__PATH}/lib/core/init.sh` fails silently with exit code 1 in Docker containers, particularly on ARM64 platforms.
 
 **Root Cause**: The original `init.sh` script had several issues that caused silent failures in Docker environments:
 1. No debugging output in Docker environments
@@ -60,7 +60,7 @@ ENV BASH_LIB_DOCKER=true
 RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash
 
 # Test the installation
-RUN bash -c "source /opt/bash-lib/core/init.sh && import console && console.info 'Test successful!'"
+RUN bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info 'Test successful!'"
 ```
 
 ### Method 3: Manual Testing
@@ -69,7 +69,7 @@ RUN bash -c "source /opt/bash-lib/core/init.sh && import console && console.info
 # In your Docker container
 export BASH_LIB_DEBUG=true
 export BASH_LIB_DOCKER=true
-source /opt/bash-lib/core/init.sh
+source /opt/bash-lib/lib/core/init.sh
 import console
 console.info "Hello from bash-lib!"
 ```
@@ -110,7 +110,7 @@ DEBUG: bash-lib initialization completed successfully
 
 ```bash
 # Check if you have the latest version
-curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/core/init.sh | head -20
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/lib/core/init.sh | head -20
 # Should show "Enhanced for Docker compatibility" in the header
 ```
 
@@ -194,7 +194,7 @@ RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/instal
 ```bash
 # Test your Dockerfile locally before pushing
 docker build -t my-app .
-docker run -it my-app bash -c "source /opt/bash-lib/core/init.sh && import console"
+docker run -it my-app bash -c "source /opt/bash-lib/lib/core/init.sh && import console"
 ```
 
 ### 2. Use Debug Mode During Development
@@ -213,7 +213,7 @@ ENV BASH_LIB_DEBUG=false
 ### 4. Add Health Checks
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD bash -c "source /opt/bash-lib/core/init.sh && import console && console.info 'Health check passed'"
+    CMD bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info 'Health check passed'"
 ```
 
 ## Support
@@ -250,10 +250,10 @@ RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/instal
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
-    echo "source /opt/bash-lib/core/init.sh" >> /etc/bash.bashrc
+    echo "source /opt/bash-lib/lib/core/init.sh" >> /etc/bash.bashrc
 
 # Test the installation
-RUN bash -c "source /opt/bash-lib/core/init.sh && import console && console.info 'bash-lib installed successfully!'"
+RUN bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info 'bash-lib installed successfully!'"
 
 # Disable debug for production
 ENV BASH_LIB_DEBUG=false

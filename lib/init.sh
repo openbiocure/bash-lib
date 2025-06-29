@@ -132,30 +132,30 @@ function import.force() {
   case "$module_name" in
   "console")
     # System-level console logging module
-    module_path="${BASH__PATH}/modules/system/console.mod.sh"
+    module_path="${BASH__PATH}/lib/modules/system/console.mod.sh"
     ;;
   "trapper")
     # System-level signal handling and error trapping module
-    module_path="${BASH__PATH}/modules/system/trapper.mod.sh"
+    module_path="${BASH__PATH}/lib/modules/system/trapper.mod.sh"
     ;;
   "service")
     # System-level service management module
-    module_path="${BASH__PATH}/modules/system/service.mod.sh"
+    module_path="${BASH__PATH}/lib/modules/system/service.mod.sh"
     ;;
   "process")
     # System-level process management module
-    module_path="${BASH__PATH}/modules/system/process.mod.sh"
+    module_path="${BASH__PATH}/lib/modules/system/process.mod.sh"
     ;;
   "engine")
     # Core engine functionality for module management
-    module_path="${BASH__PATH}/modules/core/engine.mod.sh"
+    module_path="${BASH__PATH}/lib/modules/core/engine.mod.sh"
     ;;
   "colors")
     # Configuration file for color definitions (not a module, but needs special handling)
-    module_path="${BASH__PATH}/config/colors.inc"
+    module_path="${BASH__PATH}/lib/config/colors.inc"
     ;;
   *)
-    # For modules that follow the standard pattern: modules/module-name/module-name.mod.sh
+    # For modules that follow the standard pattern: lib/modules/module-name/module-name.mod.sh
     # Examples: file, http, math, date, etc.
     # Use the regular import function which has proper guard checking
     import "$module_name" "$extension"
@@ -245,27 +245,27 @@ function import() {
   case "$1" in
   "console")
     # System-level console logging module
-    module_path="${src}/modules/system/console.mod.sh"
+    module_path="${src}/lib/modules/system/console.mod.sh"
     ;;
   "trapper")
     # System-level signal handling and error trapping module
-    module_path="${src}/modules/system/trapper.mod.sh"
+    module_path="${src}/lib/modules/system/trapper.mod.sh"
     ;;
   "service")
     # System-level service management module
-    module_path="${src}/modules/system/service.mod.sh"
+    module_path="${src}/lib/modules/system/service.mod.sh"
     ;;
   "process")
     # System-level process management module
-    module_path="${src}/modules/system/process.mod.sh"
+    module_path="${src}/lib/modules/system/process.mod.sh"
     ;;
   "engine")
     # Core engine functionality for module management
-    module_path="${src}/modules/core/engine.mod.sh"
+    module_path="${src}/lib/modules/core/engine.mod.sh"
     ;;
   "colors")
     # Configuration file for color definitions (not a module, but needs special handling)
-    module_path="${src}/config/colors.inc"
+    module_path="${src}/lib/config/colors.inc"
     ;;
   esac
 
@@ -368,12 +368,12 @@ main_init() {
 
     echo "DEBUG: Script directory: $script_dir"
 
-    # Navigate up to find the bash-lib root (where core/ and modules/ directories exist)
+    # Navigate up to find the bash-lib root (where lib/core/ and lib/modules/ directories exist)
     current_dir="$script_dir"
     bash_lib_root=""
 
     while [[ -n "$current_dir" ]] && [[ "$current_dir" != "/" ]]; do
-      if [[ -d "$current_dir/core" ]] && [[ -d "$current_dir/modules" ]]; then
+      if [[ -d "$current_dir/lib/core" ]] && [[ -d "$current_dir/lib/modules" ]]; then
         bash_lib_root="$current_dir"
         break
       fi
@@ -399,9 +399,9 @@ main_init() {
 
     # Step 4: Source build configuration
     echo "DEBUG: Step 4 - Build configuration"
-    if [[ -f "${BASH__PATH}/config/build.inc" ]]; then
+    if [[ -f "${BASH__PATH}/lib/config/build.inc" ]]; then
       echo "DEBUG: Sourcing build configuration"
-      source "${BASH__PATH}/config/build.inc" 2>/dev/null || echo "DEBUG: Build config sourcing failed (non-critical)"
+      source "${BASH__PATH}/lib/config/build.inc" 2>/dev/null || echo "DEBUG: Build config sourcing failed (non-critical)"
     else
       echo "DEBUG: Build configuration not found"
     fi
@@ -410,17 +410,17 @@ main_init() {
     echo "DEBUG: Step 5 - Core module imports"
 
     # Import trapper module
-    if [[ -f "${BASH__PATH}/modules/system/trapper.mod.sh" ]]; then
+    if [[ -f "${BASH__PATH}/lib/modules/system/trapper.mod.sh" ]]; then
       echo "DEBUG: Sourcing trapper module"
-      source "${BASH__PATH}/modules/system/trapper.mod.sh" 2>/dev/null || echo "DEBUG: Trapper module sourcing failed (non-critical)"
+      source "${BASH__PATH}/lib/modules/system/trapper.mod.sh" 2>/dev/null || echo "DEBUG: Trapper module sourcing failed (non-critical)"
     else
       echo "DEBUG: Trapper module not found"
     fi
 
     # Import console module
-    if [[ -f "${BASH__PATH}/modules/system/console.mod.sh" ]]; then
+    if [[ -f "${BASH__PATH}/lib/modules/system/console.mod.sh" ]]; then
       echo "DEBUG: Sourcing console module"
-      source "${BASH__PATH}/modules/system/console.mod.sh" 2>/dev/null || echo "DEBUG: Console module sourcing failed (non-critical)"
+      source "${BASH__PATH}/lib/modules/system/console.mod.sh" 2>/dev/null || echo "DEBUG: Console module sourcing failed (non-critical)"
     else
       echo "DEBUG: Console module not found"
     fi

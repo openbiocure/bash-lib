@@ -17,7 +17,7 @@ RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/instal
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
-    echo "source /opt/bash-lib/core/init.sh" >> /etc/bash.bashrc
+    echo "source /opt/bash-lib/lib/core/init.sh" >> /etc/bash.bashrc
 ```
 
 ### Method 2: Using the Main Installation Script (Fixed)
@@ -35,7 +35,7 @@ RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/instal
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
-    echo "source /opt/bash-lib/core/init.sh" >> /etc/bash.bashrc
+    echo "source /opt/bash-lib/lib/core/init.sh" >> /etc/bash.bashrc
 ```
 
 ### Method 3: Manual Installation
@@ -58,7 +58,7 @@ RUN mkdir -p /opt/bash-lib && \
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
-    echo "source /opt/bash-lib/core/init.sh" >> /etc/bash.bashrc
+    echo "source /opt/bash-lib/lib/core/init.sh" >> /etc/bash.bashrc
 ```
 
 ## Common Issues and Solutions
@@ -104,10 +104,10 @@ RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/instal
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
-    echo "source /opt/bash-lib/core/init.sh" >> /etc/bash.bashrc
+    echo "source /opt/bash-lib/lib/core/init.sh" >> /etc/bash.bashrc
 
 # Verify installation
-RUN bash -c "source /opt/bash-lib/core/init.sh && import console && console.info 'bash-lib installed successfully!'"
+RUN bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info 'bash-lib installed successfully!'"
 
 CMD ["bash"]
 ```
@@ -132,10 +132,10 @@ RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/instal
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bashrc && \
-    echo "source /opt/bash-lib/core/init.sh" >> /etc/bashrc
+    echo "source /opt/bash-lib/lib/core/init.sh" >> /etc/bashrc
 
 # Verify installation
-RUN bash -c "source /opt/bash-lib/core/init.sh && import console && console.info 'bash-lib installed successfully!'"
+RUN bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info 'bash-lib installed successfully!'"
 
 CMD ["bash"]
 ```
@@ -159,10 +159,10 @@ RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/instal
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/profile && \
-    echo "source /opt/bash-lib/core/init.sh" >> /etc/profile
+    echo "source /opt/bash-lib/lib/core/init.sh" >> /etc/profile
 
 # Verify installation
-RUN bash -c "source /opt/bash-lib/core/init.sh && import console && console.info 'bash-lib installed successfully!'"
+RUN bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info 'bash-lib installed successfully!'"
 
 CMD ["bash"]
 ```
@@ -201,10 +201,10 @@ You can customize the installation by setting these environment variables:
 ls -la /opt/bash-lib
 
 # Check if the init script exists
-ls -la /opt/bash-lib/core/init.sh
+ls -la /opt/bash-lib/lib/core/init.sh
 
 # Try to source bash-lib
-source /opt/bash-lib/core/init.sh
+source /opt/bash-lib/lib/core/init.sh
 ```
 
 ### Check if import function is available

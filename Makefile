@@ -5,18 +5,18 @@ SHELL:=/bin/bash
 
 # Check and install dependencies
 check-deps:
-	@chmod +x dependencies-management.sh
-	@./dependencies-management.sh check
+	@chmod +x scripts/dependencies-management.sh
+	@./scripts/dependencies-management.sh check
 
 # Install missing dependencies
 install-deps:
-	@chmod +x dependencies-management.sh
-	@./dependencies-management.sh install
+	@chmod +x scripts/dependencies-management.sh
+	@./scripts/dependencies-management.sh install
 
 # Show dependency status
 deps-status:
-	@chmod +x dependencies-management.sh
-	@./dependencies-management.sh status
+	@chmod +x scripts/dependencies-management.sh
+	@./scripts/dependencies-management.sh status
 
 # Check and install shellspec if needed (legacy target)
 ensure-shellspec: install-deps
@@ -33,16 +33,16 @@ test: install-deps
 install: install-deps
 	@echo "Installing bash-lib..."
 	@mkdir -p dist/bash-lib
-	@cp -r core modules config assets README.md CHANGELOG.md LICENSE* dist/bash-lib/ 2>/dev/null || true
-	@cp install.sh dist/bash-lib/
+	@cp -r lib assets lib/docs/README.md lib/docs/CHANGELOG.md LICENSE* dist/bash-lib/ 2>/dev/null || true
+	@cp scripts/install.sh dist/bash-lib/
 	@chmod +x dist/bash-lib/install.sh
 	@cd dist/bash-lib && sudo ./install.sh
 
 # uninstall bash-lib
 uninstall:
 	@echo "Uninstalling bash-lib..."
-	@chmod +x install.sh
-	@sudo ./install.sh uninstall
+	@chmod +x scripts/install.sh
+	@sudo ./scripts/install.sh uninstall
 
 # clean build artifacts
 clean:
@@ -52,7 +52,7 @@ clean:
 
 # generate Manual.md from all module help functions
 man:
-	@./manual.sh
+	@./tools/manual.sh
 
 # show help
 help:

@@ -23,12 +23,12 @@ RUN chmod +x /usr/local/bin/test-docker-init.sh
 RUN echo "export BASH__PATH=/opt/bash-lib" >>/etc/bash.bashrc &&
     echo "export BASH_LIB_DEBUG=true" >>/etc/bash.bashrc &&
     echo "export BASH_LIB_DOCKER=true" >>/etc/bash.bashrc &&
-    echo "source /opt/bash-lib/core/init.sh" >>/etc/bash.bashrc
+    echo "source /opt/bash-lib/lib/core/init.sh" >>/etc/bash.bashrc
 
 # Run your init test
 RUN /usr/local/bin/test-docker-init.sh
 
 # Final verification
-RUN bash -c "source /opt/bash-lib/core/init.sh && import console && console.info '✅ bash-lib installed and working inside Docker!'"
+RUN bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info '✅ bash-lib installed and working inside Docker!'"
 
 CMD ["bash"]

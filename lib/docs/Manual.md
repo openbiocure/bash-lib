@@ -55,7 +55,7 @@ make install
 ```sh
 # Source the library
 export BASH__PATH="/path/to/bash-lib"
-source core/init.sh
+source lib/core/init.sh
 
 # Import a module
 import directory
@@ -648,21 +648,21 @@ Options:
 Examples:
   # Basic trap
   trapper.addTrap 'echo "Exiting..."' EXIT
-  
+
   # Module-specific trap
   trapper.addModuleTrap "http" 'http.cleanup' EXIT
   trapper.addModuleTrap "file" 'file.cleanup_temp' INT TERM
-  
+
   # Temporary resources with auto-cleanup
   temp_file=$(trapper.tempFile)
   temp_dir=$(trapper.tempDir)
-  
+
   # List and manage traps
   trapper.list
   trapper.list --module="http"
   trapper.removeModuleTraps "file"
   trapper.clear
-  
+
   # Set up default error handling
   trapper.setupDefaults --verbose
 ```

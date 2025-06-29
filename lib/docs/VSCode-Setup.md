@@ -53,7 +53,7 @@ This guide will help you set up VSCode with full autocomplete and IntelliSense s
 Use these prefixes for quick code insertion:
 
 - `bl-import` → `import module_name`
-- `bl-source` → `source core/init.sh`
+- `bl-source` → `source lib/core/init.sh`
 - `bl-console-log` → `console.log "message"`
 - `bl-console-info` → `console.info "message"`
 - `bl-file-create` → `file.create "path" --content="content"`
@@ -174,4 +174,4 @@ To improve VSCode support:
 1. **Add new snippets** to `.vscode/bash-lib-snippets.json`
 2. **Update function descriptions** in `.vscode/bash-lib-language-server.json`
 3. **Enhance the extension** in `vscode-extension/`
-4. **Update this documentation** with new features 
+4. **Update this documentation** with new features

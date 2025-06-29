@@ -42,7 +42,7 @@ if [[ -d "$BASH__PATH" ]]; then
     echo "✓ Bash-lib directory exists"
 
     # Check key files
-    for file in "core/init.sh" "modules/system/console.mod.sh" "modules/system/trapper.mod.sh"; do
+    for file in "lib/core/init.sh" "lib/modules/system/console.mod.sh" "lib/modules/system/trapper.mod.sh"; do
         if [[ -f "$BASH__PATH/$file" ]]; then
             echo "✓ $file exists"
         else
@@ -51,13 +51,13 @@ if [[ -d "$BASH__PATH" ]]; then
     done
 
     # Check permissions
-    if [[ -r "$BASH__PATH/core/init.sh" ]]; then
+    if [[ -r "$BASH__PATH/lib/core/init.sh" ]]; then
         echo "✓ init.sh is readable"
     else
         echo "✗ init.sh is not readable"
     fi
 
-    if [[ -x "$BASH__PATH/core/init.sh" ]]; then
+    if [[ -x "$BASH__PATH/lib/core/init.sh" ]]; then
         echo "✓ init.sh is executable"
     else
         echo "✗ init.sh is not executable"
@@ -71,7 +71,7 @@ echo
 # Test init.sh syntax
 echo "Syntax Check:"
 echo "============="
-if bash -n "$BASH__PATH/core/init.sh"; then
+if bash -n "$BASH__PATH/lib/core/init.sh"; then
     echo "✓ init.sh syntax is valid"
 else
     echo "✗ init.sh has syntax errors"
@@ -96,7 +96,7 @@ echo "Attempting to source init.sh directly..."
 
 # Capture all output and exit codes
 {
-    source_output=$(source "$BASH__PATH/core/init.sh" 2>&1)
+    source_output=$(source "$BASH__PATH/lib/core/init.sh" 2>&1)
     source_exit_code=$?
 } || {
     source_exit_code=$?
@@ -142,7 +142,7 @@ echo
 # Step 4: Module discovery test
 echo "Step 4: Module Discovery Test"
 echo "Available modules:"
-find "$BASH__PATH/modules" -name "*.mod.sh" 2>/dev/null | while read -r module; do
+find "$BASH__PATH/lib/modules" -name "*.mod.sh" 2>/dev/null | while read -r module; do
     module_name=$(basename "$module" .mod.sh)
     echo "  - $module_name"
 done
