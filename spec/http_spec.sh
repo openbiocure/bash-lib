@@ -1,9 +1,16 @@
 #!/bin/bash
 
-Describe 'HTTP Module'
-Include spec/spec_helper.sh
+export BASH__VERBOSE=none
 
-BeforeAll 'setup_test_environment'
+Describe 'HTTP Module'
+setup() {
+    # Source the import system in every test shell
+    export BASH__PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/" && pwd)"
+    source "${BASH__PATH}/lib/init.sh"
+    import http
+    import string
+}
+Before setup
 
 Describe 'http.get'
 It 'should perform GET request successfully'

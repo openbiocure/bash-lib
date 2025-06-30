@@ -7,7 +7,7 @@
 # DEBUG WRAPPER
 #---------------------------------------
 __debug() {
-  [[ "${BASH__VERBOSE}" == "debug" ]] && echo "DEBUG: $*" >&2
+  [[ "${BASH__VERBOSE}" == "debug" ]] && printf "DEBUG: %s\n" "$*" >&2
 }
 
 #---------------------------------------
@@ -34,7 +34,7 @@ validate_environment() {
 
   for var in PATH; do
     [[ -z "${!var}" ]] && {
-      echo "ERROR: Required environment variable $var is not set" >&2
+      printf "ERROR: Required environment variable %s is not set\n" "$var" >&2
       return 1
     }
   done
@@ -54,22 +54,22 @@ import.meta.loaded() {
 }
 
 import.meta.all() {
-  echo "Loaded bash-lib modules:"
+  printf "Loaded bash-lib modules:\n"
   declare -xp | grep '^declare \-x BASH_LIB_IMPORTED_' | while read -r line; do
     local var=$(cut -d= -f1 <<<"$line" | sed 's/declare -x //')
-    echo "  ✓ ${var#BASH_LIB_IMPORTED_}"
+    printf "  ✓ %s\n" "${var#BASH_LIB_IMPORTED_}"
   done
 }
 
 import.meta.info() {
   local name="$1"
   [[ -z "$name" ]] && {
-    echo "Usage: import.meta.info <module_name>" >&2
+    printf "Usage: import.meta.info <module_name>\n" >&2
     return 1
   }
 
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
-  [[ -n "${!signal}" ]] && echo "Module '$name' is loaded" || echo "Module '$name' is not loaded"
+  [[ -n "${!signal}" ]] && printf "Module '%s' is loaded\n" "$name" || printf "Module '%s' is not loaded\n" "$name"
 }
 
 #---------------------------------------
@@ -78,7 +78,7 @@ import.meta.info() {
 import() {
   local name="$1" ext="${2:-mod.sh}"
   [[ -z "$name" ]] && {
-    echo -e "\e[31mError:\e[0m import requires a module name" >&2
+    printf "\e[31mError:\e[0m import requires a module name\n" >&2
     return 1
   }
 
@@ -107,10 +107,10 @@ import() {
     __debug "Importing $name from $mod_path"
     source "$mod_path"
     [[ -n "${!signal}" || "$(type -t "${name}.help")" == "function" ]] && return 0
-    echo -e "\e[33mWarning:\e[0m '$name' loaded but import signal not set" >&2
+    printf "\e[33mWarning:\e[0m '%s' loaded but import signal not set\n" "$name" >&2
     return 0
   else
-    echo -e "\e[31mError:\e[0m Could not find module: $name [$mod_path]" >&2
+    printf "\e[31mError:\e[0m Could not find module: %s [%s]\n" "$name" "$mod_path" >&2
     return 2
   fi
 }
@@ -118,7 +118,7 @@ import() {
 import.force() {
   local name="$1" ext="${2:-mod.sh}"
   [[ -z "$name" ]] && {
-    echo -e "\e[31mError:\e[0m Missing module name for import.force" >&2
+    printf "\e[31mError:\e[0m Missing module name for import.force\n" >&2
     return 1
   }
 
@@ -131,7 +131,7 @@ import.meta.reload() {
   declare -xp | grep '^declare \-x BASH_LIB_IMPORTED_' | while read -r line; do
     local var=$(cut -d= -f1 <<<"$line" | sed 's/declare -x //')
     local name="${var#BASH_LIB_IMPORTED_}"
-    echo "Reloading: $name"
+    printf "Reloading: %s\n" "$name"
     import.force "$name"
   done
 }
@@ -144,7 +144,7 @@ main_init() {
 
   # Step 1: Validate environment
   if ! validate_environment; then
-    echo "ERROR: Environment validation failed" >&2
+    printf "ERROR: Environment validation failed\n" >&2
     return 1
   fi
 
@@ -178,12 +178,15 @@ main_init() {
   fi
 
   if command -v console.debug >/dev/null; then
-    console.debug "Verbosity: $BASH__VERBOSE"
-    console.debug "BASH__PATH: $BASH__PATH"
+    if [[ "$(console.get_verbosity)" == "debug" || "$(console.get_verbosity)" == "trace" ]]; then
+      console.debug "Verbosity: $(console.get_verbosity)"
+      console.debug "BASH__PATH: $BASH__PATH"
+    fi
   else
-    __debug "console.debug not available, fallback to echo"
-    echo "INFO: Verbosity: $BASH__VERBOSE"
-    echo "INFO: BASH__PATH: $BASH__PATH"
+    if [[ "$BASH__VERBOSE" == "debug" || "$BASH__VERBOSE" == "trace" ]]; then
+      printf "DEBUG: Verbosity: %s\n" "$BASH__VERBOSE"
+      printf "DEBUG: BASH__PATH: %s\n" "$BASH__PATH"
+    fi
   fi
 
   __debug "Initialization complete."
@@ -195,7 +198,7 @@ main_init() {
 #---------------------------------------
 if [[ "${BASH_LIB_DOCKER}" == "true" && "$(command -v timeout)" ]]; then
   timeout ${TIMEOUT_SECONDS}s main_init || {
-    echo "ERROR: Initialization timed out after $TIMEOUT_SECONDS seconds" >&2
+    printf "ERROR: Initialization timed out after %s seconds\n" "$TIMEOUT_SECONDS" >&2
     exit 1
   }
 else

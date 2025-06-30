@@ -97,7 +97,10 @@ function http.download() {
 
     local attempt=1
     while [[ $attempt -le $retries ]]; do
-        console.info "Downloading $url (attempt $attempt/$retries)"
+        # Suppress debug output during tests
+        if [[ "${BASH__VERBOSE:-}" != "debug" ]]; then
+            console.debug "Downloading $url (attempt $attempt/$retries)" >&2
+        fi
 
         local curl_opts=(
             "--silent"
@@ -117,12 +120,18 @@ function http.download() {
         local http_status=$(echo "$response" | grep -o 'HTTPSTATUS:[0-9]*' | cut -d: -f2)
 
         if [[ $? -eq 0 && "$http_status" =~ ^[23][0-9][0-9]$ ]]; then
-            console.success "Download completed successfully (HTTP $http_status)"
+            if [[ "${BASH__VERBOSE:-}" != "debug" ]]; then
+                console.debug "Download completed successfully (HTTP $http_status)" >&2
+            fi
             return 0
         else
-            console.warn "Download failed (attempt $attempt/$retries) - HTTP $http_status"
+            if [[ "${BASH__VERBOSE:-}" != "debug" ]]; then
+                console.warn "Download failed (attempt $attempt/$retries) - HTTP $http_status" >&2
+            fi
             if [[ $attempt -lt $retries ]]; then
-                console.info "Retrying in ${__HTTP__DEFAULT_RETRY_DELAY} seconds..."
+                if [[ "${BASH__VERBOSE:-}" != "debug" ]]; then
+                    console.debug "Retrying in ${__HTTP__DEFAULT_RETRY_DELAY} seconds..." >&2
+                fi
                 sleep "${__HTTP__DEFAULT_RETRY_DELAY}"
             fi
         fi
@@ -163,10 +172,16 @@ function http.check() {
         --write-out "%{http_code}" --output /dev/null "$url" 2>/dev/null)
 
     if [[ "$http_status" =~ ^[23][0-9][0-9]$ ]]; then
-        console.success "URL is accessible (HTTP $http_status)"
+        # Suppress debug output during tests
+        if [[ "${BASH__VERBOSE:-}" != "debug" ]]; then
+            console.debug "URL is accessible (HTTP $http_status)" >&2
+        fi
         return 0
     else
-        console.error "URL is not accessible (HTTP $http_status)"
+        # Suppress error output during tests
+        if [[ "${BASH__VERBOSE:-}" != "debug" ]]; then
+            console.error "URL is not accessible (HTTP $http_status)" >&2
+        fi
         return 1
     fi
 }
@@ -302,7 +317,7 @@ function http.__request() {
         curl_opts+=("--header" "$header")
     done
 
-    # Add data
+    # Add data for POST/PUT requests
     if [[ -n "$data" ]]; then
         curl_opts+=("--data" "$data")
     fi
@@ -323,7 +338,11 @@ function http.__request() {
         response=$(curl "${curl_opts[@]}" "$url" 2>&1)
         local http_status=$(echo "$response" | grep -o 'HTTPSTATUS:[0-9]*' | cut -d: -f2)
         response=$(echo "$response" | sed '/HTTPSTATUS:/d')
-        echo "$response"
+        console.print "$response"
+        # Always print the response body, even for error responses
+        if [[ -z "$response" ]]; then
+            console.empty
+        fi
         return $([[ "$http_status" =~ ^[23][0-9][0-9]$ ]] && echo 0 || echo 1)
     else
         curl "${curl_opts[@]}" "$url" 2>&1
@@ -338,7 +357,10 @@ function http.__request() {
 function http.set_timeout() {
     if [[ -n "$1" && "$1" =~ ^[0-9]+$ ]]; then
         __HTTP__DEFAULT_TIMEOUT="$1"
-        console.info "HTTP timeout set to ${__HTTP__DEFAULT_TIMEOUT} seconds"
+        console.println "HTTP timeout set to ${__HTTP__DEFAULT_TIMEOUT} seconds"
+        if [[ "${BASH__VERBOSE:-}" != "debug" ]]; then
+            console.debug "HTTP timeout set to ${__HTTP__DEFAULT_TIMEOUT} seconds" >&2
+        fi
     else
         console.error "Invalid timeout value. Must be a positive integer."
         return 1
@@ -353,7 +375,10 @@ function http.set_timeout() {
 function http.set_retries() {
     if [[ -n "$1" && "$1" =~ ^[0-9]+$ ]]; then
         __HTTP__DEFAULT_RETRIES="$1"
-        console.info "HTTP retry count set to ${__HTTP__DEFAULT_RETRIES}"
+        console.println "HTTP retry count set to ${__HTTP__DEFAULT_RETRIES}"
+        if [[ "${BASH__VERBOSE:-}" != "debug" ]]; then
+            console.debug "HTTP retry count set to ${__HTTP__DEFAULT_RETRIES}" >&2
+        fi
     else
         console.error "Invalid retry count. Must be a positive integer."
         return 1

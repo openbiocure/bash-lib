@@ -1,198 +1,143 @@
 #!/bin/bash
 
-# Console Module for bash-lib
-# Provides structured logging functionality with color support and verbosity control
-
-exec 3>&1
+# Console Module for bash-lib (Modern, Robust, Test-Friendly)
+# Provides structured logging with color, verbosity, and safe output
 
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
     import.meta.loaded "console" "${BASH__PATH:-/opt/bash-lib}/lib/modules/system/console.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
+# Import color definitions
 import "colors" "inc"
 
 # Configuration
 __CONSOLE__TIME__FORMAT="+%d/%m/%Y %H:%M:%S"
-__CONSOLE__DEFAULT_VERBOSITY="trace"
+__CONSOLE__DEFAULT_VERBOSITY="info"
+__CONSOLE__OUTPUT="stdout" # Can be: stdout, stderr, /dev/null, or a file
 
-# Shell detection
-__console__detect_shell() {
-    if [[ -n "$ZSH_VERSION" ]]; then
-        echo "zsh"
-    elif [[ -n "$BASH_VERSION" ]]; then
-        echo "bash"
+# Log level mapping (lowest to highest)
+declare -A __CONSOLE__LEVELS=(
+    [trace]=0
+    [debug]=1
+    [info]=2
+    [warn]=3
+    [error]=4
+    [fatal]=5
+    [success]=6
+    [log]=7
+)
+
+# Color mapping for log types
+declare -A __CONSOLE__COLORS=(
+    [trace]="$BYellow"
+    [debug]="$BCyan"
+    [info]="$Color_Off"
+    [warn]="$BYellow"
+    [error]="$BRed"
+    [fatal]="$BRed"
+    [success]="$BGreen"
+    [log]="$Color_Off"
+)
+
+# Output stream selector
+__console__output_stream() {
+    if [[ -n "$BASH_LIB_TEST" ]]; then
+        echo "/dev/null"
+    elif [[ "$__CONSOLE__OUTPUT" == "stderr" ]]; then
+        echo ">&2"
+    elif [[ "$__CONSOLE__OUTPUT" == "stdout" ]]; then
+        echo
     else
-        echo "unknown"
+        echo ">> $__CONSOLE__OUTPUT"
     fi
 }
 
-# Get current script name
-__console__get_script_name() {
-    local shell_name=$(__console__detect_shell)
-
-    case $shell_name in
-        "zsh")
-            echo "${(%):-%N}"
-            ;;
-        "bash")
-            if [[ -n "$0" ]]; then
-                basename "$0" 2>/dev/null || echo "bash"
-            else
-                echo "bash"
-            fi
-            ;;
-        *)
-            echo "unknown"
-            ;;
-    esac
+# Get numeric value for a log level
+__console__level_value() {
+    local level="${1,,}"
+    printf "%d" "${__CONSOLE__LEVELS[$level]:-2}"
 }
 
-# Get source file name for logging
-__console__get_source_file() {
-    local shell_name=$(__console__detect_shell)
-
-    case $shell_name in
-        "bash")
-            if command -v caller >/dev/null 2>&1; then
-                caller 0 2>/dev/null | awk '{print $2}' | head -1 | xargs basename 2>/dev/null || echo "bash"
-            else
-                echo "bash"
-            fi
-            ;;
-        "zsh")
-            echo "${(%):-%N}"
-            ;;
-        *)
-            echo "unknown"
-            ;;
-    esac
-}
-
-# Check if log should be displayed based on verbosity
+# Should log this level?
 __console__should_log() {
-    local requested_log_type="$1"
-    local verbose="${BASH__VERBOSE:-$__CONSOLE__DEFAULT_VERBOSITY}"
+    local requested="$1"
+    local current="${BASH__VERBOSE:-$__CONSOLE__DEFAULT_VERBOSITY}"
+    local req_val=$(__console__level_value "$requested")
+    local cur_val=$(__console__level_value "$current")
 
-    # Convert to lowercase for comparison
-    verbose=$(echo "$verbose" | tr '[:upper:]' '[:lower:]')
-    requested_log_type=$(echo "$requested_log_type" | tr '[:upper:]' '[:lower:]')
-
-    # Always log these types
-    case $requested_log_type in
-        log|fatal|warn|error|success)
-            return 0
-            ;;
-    esac
-
-    # Check verbosity for these types
-    case $requested_log_type in
-        trace|debug|info)
-            if [[ "$verbose" == "trace" ]] || [[ "$verbose" == "$requested_log_type" ]]; then
-                return 0
-            fi
-            ;;
-    esac
-
-    return 1
+    # Only log if requested level is >= current verbosity level
+    [[ $req_val -ge $cur_val ]]
 }
 
 # Core logging function
 __console__log() {
-    local log_type="$1"
-    local color="$2"
-    local message="$3"
-    local line_no="$4"
-
-    # Check if we should log this message
-    if ! __console__should_log "$log_type"; then
-        return 0
-    fi
-
-    # Get logging metadata
+    local log_type="${1,,}"
+    shift
+    local message="$*"
+    local color="${__CONSOLE__COLORS[$log_type]:-$Color_Off}"
+    local color_off="$Color_Off"
     local log_date=$(date "$__CONSOLE__TIME__FORMAT")
     local host_name=$(hostname)
-    local script=$(__console__get_script_name)
-    local source_file=$(__console__get_source_file)
-    local color_off="${Color_Off}"
+    local script_name=$(basename "$0" 2>/dev/null || printf "bash")
+    local template="${color}${log_date} - ${host_name} - ${script_name} - [${log_type^^}]:${color_off}"
+    local out_stream=$(__console__output_stream)
 
-    # Build log template
-    local template="${color}${log_date} - ${host_name} - ${script} - [${log_type}]:${color_off}"
+    __console__should_log "$log_type" || return 0
 
-    # Output the log message to stdout for better test compatibility
-    echo -e "${template} ${message}"
-}
-
-# Public logging functions
-console.log() {
-    local message="$*"
-    local line_no=$LINENO
-
-    __console__log "LOG" "${Color_Off}" "$message" "$line_no"
-}
-
-console.info() {
-    local message="$*"
-    local line_no=$LINENO
-
-    __console__log "INFO" "${Color_Off}" "$message" "$line_no"
-}
-
-console.debug() {
-    local message="$*"
-    local line_no=$LINENO
-
-    __console__log "DEBUG" "${BCyan}" "$message" "$line_no"
-}
-
-console.trace() {
-    local message="$*"
-    local line_no=$LINENO
-
-    __console__log "TRACE" "${BYellow}" "$message" "$line_no"
-}
-
-console.warn() {
-    local message="$*"
-    local line_no=$LINENO
-
-    __console__log "WARN" "${BYellow}" "$message" "$line_no"
-}
-
-console.error() {
-    local message="$*"
-    local line_no=$LINENO
-
-    __console__log "ERROR" "${BRed}" "$message" "$line_no"
-}
-
-console.fatal() {
-    local message="$*"
-    local line_no=$LINENO
-
-    __console__log "FATAL" "${BRed}" "$message" "$line_no"
-}
-
-console.success() {
-    local message="$*"
-    local line_no=$LINENO
-
-    __console__log "SUCCESS" "${BGreen}" "$message" "$line_no"
-}
-
-# Utility functions
-console.set_verbosity() {
-    if [[ -n "$1" ]]; then
-        export BASH__VERBOSE="$1"
-        console.debug "Verbosity set to: $1"
+    # Output safely using printf (no broken pipe)
+    if [[ -z "$out_stream" ]]; then
+        printf "%b %s\n" "$template" "$message" 2>/dev/null || true
     else
-        console.error "No verbosity level specified"
+        eval "printf \"%b %s\\n\" \"$template\" \"$message\" $out_stream" 2>/dev/null || true
+    fi
+}
+
+# Public API
+console.log() { __console__log log "$@"; }
+console.info() { __console__log info "$@"; }
+console.debug() { __console__log debug "$@"; }
+console.trace() { __console__log trace "$@"; }
+console.warn() { __console__log warn "$@"; }
+console.error() { __console__log error "$@"; }
+console.fatal() { __console__log fatal "$@"; }
+console.success() { __console__log success "$@"; }
+
+# Simple output functions (no formatting, no colors)
+console.print() { printf "%s" "$*"; }
+console.println() { printf "%s\n" "$*"; }
+console.print_error() { printf "%s" "$*" >&2; }
+console.println_error() { printf "%s\n" "$*" >&2; }
+console.empty() { printf ""; }
+
+# Verbosity control
+console.set_verbosity() {
+    local level="${1,,}"
+    if [[ -n "${__CONSOLE__LEVELS[$level]}" ]]; then
+        export BASH__VERBOSE="$level"
+        console.debug "Verbosity set to: $level"
+    else
+        console.error "Invalid verbosity level: $level"
         return 1
     fi
 }
-
 console.get_verbosity() {
-    echo "${BASH__VERBOSE:-$__CONSOLE__DEFAULT_VERBOSITY}"
+    printf "%s" "${BASH__VERBOSE:-$__CONSOLE__DEFAULT_VERBOSITY}"
+}
+
+# Output control
+console.set_output() {
+    local out="$1"
+    if [[ "$out" == "stdout" || "$out" == "stderr" || "$out" == "/dev/null" || -n "$out" ]]; then
+        __CONSOLE__OUTPUT="$out"
+        console.debug "Console output set to: $out"
+    else
+        console.error "Invalid output: $out"
+        return 1
+    fi
+}
+console.get_output() {
+    printf "%s" "$__CONSOLE__OUTPUT"
 }
 
 console.set_time_format() {
@@ -205,40 +150,40 @@ console.set_time_format() {
     fi
 }
 
-# Help function
 console.help() {
     cat <<EOF
 Console Module - Structured Logging for bash-lib
 
 Available Functions:
-  console.log <message>     - Log a message with [LOG] identifier
-  console.info <message>    - Log an info message with [INFO] identifier
-  console.debug <message>   - Log a debug message with [DEBUG] identifier
-  console.trace <message>   - Log a trace message with [TRACE] identifier
-  console.warn <message>    - Log a warning message with [WARN] identifier
-  console.error <message>   - Log an error message with [ERROR] identifier
-  console.fatal <message>   - Log a fatal message with [FATAL] identifier
-  console.success <message> - Log a success message with [SUCCESS] identifier
+  console.log <msg>      - Log a message
+  console.info <msg>     - Info message
+  console.debug <msg>    - Debug message
+  console.trace <msg>    - Trace message
+  console.warn <msg>     - Warning message
+  console.error <msg>    - Error message
+  console.fatal <msg>    - Fatal message
+  console.success <msg>  - Success message
+  console.print <msg>    - Print without newline
+  console.println <msg>  - Print with newline
+  console.print_error <msg>  - Print to stderr without newline
+  console.println_error <msg> - Print to stderr with newline
+  console.set_verbosity <level> - Set verbosity (trace|debug|info|warn|error|fatal|success|log)
+  console.get_verbosity         - Get current verbosity
+  console.set_output <target>   - Set output (stdout|stderr|/dev/null|file)
+  console.get_output            - Get current output
+  console.set_time_format <fmt> - Set time format
+  console.help                  - Show this help
 
-Utility Functions:
-  console.set_verbosity <level>  - Set logging verbosity (trace|debug|info|warn|error|fatal)
-  console.get_verbosity          - Get current verbosity level
-  console.set_time_format <fmt>  - Set custom time format (date format string)
-  console.help                   - Show this help message
-
-Verbosity Levels:
-  trace  - Show all log messages (default)
-  debug  - Show debug and above
-  info   - Show info and above
-  warn   - Show warnings and above
-  error  - Show errors and above
-  fatal  - Show only fatal messages
+Environment:
+  BASH__VERBOSE      - Current verbosity
+  BASH_LIB_TEST      - If set, all logs go to /dev/null
 
 Examples:
-  console.log "Application started"
+  console.info "App started"
+  console.println "Simple output"
   console.set_verbosity debug
-  console.debug "Processing user input"
-  console.error "Failed to connect to database"
+  console.set_output /tmp/mylog.txt
+  console.set_time_format "+%Y-%m-%d %H:%M:%S"
 EOF
 }
 

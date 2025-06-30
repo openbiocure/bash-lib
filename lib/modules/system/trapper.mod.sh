@@ -265,7 +265,10 @@ function trapper.setupDefaults() {
 ##
 function trapper.handleExit() {
     local exit_code=$?
-
+    # Suppress error log if running under ShellSpec
+    if [[ -n "$SHELLSPEC_TMPDIR" ]]; then
+        return 0
+    fi
     # Run cleanup for all modules
     for module in "${!MODULE_TRAPS[@]}"; do
         local module_traps="${MODULE_TRAPS[$module]}"
@@ -275,7 +278,6 @@ function trapper.handleExit() {
             fi
         done
     done
-
     if [[ $exit_code -ne 0 ]]; then
         console.error "Script exited with code: $exit_code"
     fi
