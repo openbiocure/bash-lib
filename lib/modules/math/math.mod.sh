@@ -18,7 +18,7 @@ import mathExceptions
 #        3
 #
 function math.add() {
-  [[ $(math.__isNumber $1) == true && $(math.__isNumber $2) == true ]] && echo $(($1 + $2)) || math.exception.arithmeticComputation
+  [[ $(math.__isNumber $1) == true && $(math.__isNumber $2) == true ]] && printf '%s\n' $(($1 + $2)) || math.exception.arithmeticComputation
 }
 
 #
@@ -26,7 +26,7 @@ function math.add() {
 #   Checks if an input is a digit
 #
 function math.__isNumber() {
-  [[ -n $1 && $1 != *[^[:digit:]]* ]] && echo true || echo false
+  [[ -n $1 && $1 != *[^[:digit:]]* ]] && printf '%s\n' true || printf '%s\n' false
 }
 
 ##

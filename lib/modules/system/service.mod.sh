@@ -480,8 +480,8 @@ service.list() {
 
         if process.exists "$pid"; then
             if [[ "$verbose" == true ]]; then
-                local process_name=$(process.getName "$pid" 2>/dev/null || echo "unknown")
-                local user=$(process.getUser "$pid" 2>/dev/null || echo "unknown")
+                local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
                 console.info "  $service_name: PID=$pid, Status=$status, Process=$process_name, User=$user"
             else
                 console.info "  $service_name: PID=$pid, Status=$status"
@@ -514,9 +514,9 @@ service.info() {
     console.info "  Status: ${SERVICE_STATUS[$service_name]}"
 
     if process.exists "$pid"; then
-        local process_name=$(process.getName "$pid" 2>/dev/null || echo "unknown")
-        local user=$(process.getUser "$pid" 2>/dev/null || echo "unknown")
-        local start_time=$(ps -o lstart= -p "$pid" 2>/dev/null || echo "unknown")
+        local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+        local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
+        local start_time=$(ps -o lstart= -p "$pid" 2>/dev/null || printf '%s\n' "unknown")
 
         console.info "  Process: $process_name"
         console.info "  User: $user"

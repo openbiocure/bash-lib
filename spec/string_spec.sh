@@ -6,9 +6,9 @@ setup() {
 Before setup
 
 Describe 'string replace'
-It "Run String Replace"
+ It "Run String Replace"
 
-When run string.replace mary cathy "How are you mary?"
-The output should equal "How are you cathy?"
-End
+    When run string.replace mary cathy "How are you mary?"
+    The output should equal "How are you cathy?"
+ End
 End

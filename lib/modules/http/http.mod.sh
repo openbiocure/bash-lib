@@ -207,7 +207,7 @@ function http.status() {
 ##
 ## (Usage) Check if URL returns 404
 ## Examples:
-##   if http.is_404 https://example.com/missing; then echo "Page not found"; fi
+##   if http.is_404 https://example.com/missing; then printf "%s\n" "Page not found"; fi
 ##
 function http.is_404() {
     local url="$1"
@@ -218,7 +218,7 @@ function http.is_404() {
 ##
 ## (Usage) Check if URL returns 200
 ## Examples:
-##   if http.is_200 https://example.com; then echo "Page exists"; fi
+##   if http.is_200 https://example.com; then printf "%s\n" "Page exists"; fi
 ##
 function http.is_200() {
     local url="$1"
@@ -327,23 +327,15 @@ function http.__request() {
         curl_opts+=("--data-urlencode" "$item")
     done
 
-    # Add status code output if requested
-    if [[ "$show_status" == "true" ]]; then
-        curl_opts+=("--write-out" "HTTPSTATUS:%{http_code}")
-    fi
-
     # Execute request
-    local response
     if [[ "$show_status" == "true" ]]; then
-        response=$(curl "${curl_opts[@]}" "$url" 2>&1)
-        local http_status=$(echo "$response" | grep -o 'HTTPSTATUS:[0-9]*' | cut -d: -f2)
-        response=$(echo "$response" | sed '/HTTPSTATUS:/d')
-        console.print "$response"
-        # Always print the response body, even for error responses
-        if [[ -z "$response" ]]; then
-            console.empty
-        fi
-        return $([[ "$http_status" =~ ^[23][0-9][0-9]$ ]] && echo 0 || echo 1)
+        # Add status code output after the URL
+        local response=$(curl "${curl_opts[@]}" --write-out "HTTPSTATUS:%{http_code}" "$url" 2>&1)
+        local http_status=$(printf '%s' "$response" | grep -o 'HTTPSTATUS:[0-9]*' | cut -d: -f2)
+        response=$(printf '%s' "$response" | sed '/HTTPSTATUS:/d')
+        printf "HTTP Status: %s\n" "$http_status" >&2
+        console.print "$response" force
+        return $([[ "$http_status" =~ ^[23][0-9][0-9]$ ]] && printf '%s' 0 || printf '%s' 1)
     else
         curl "${curl_opts[@]}" "$url" 2>&1
     fi
@@ -421,7 +413,7 @@ Examples:
   http.post https://api.example.com/submit --data='{"key":"value"}'
   http.download https://example.com/file.zip /tmp/file.zip
   http.check https://example.com
-  if http.is_200 https://example.com; then echo "Site is up"; fi
+  if http.is_200 https://example.com; then printf "%s\n" "Site is up"; fi
 EOF
 }
 

@@ -54,20 +54,20 @@ function process.list() {
 
     # If no-log is specified, just output the raw ps output
     if [[ "$no_log" == "true" ]]; then
-        echo "$list"
+        printf '%s\n' "$list"
         return 0
     fi
 
     # For better performance, batch the output
     if [[ "$format" == "compact" ]]; then
         # Compact format: just PID, CPU%, MEM%, COMMAND
-        echo "$list" | awk '{printf "%-8s %-6s %-6s %s\n", $2, $3, $4, $11}'
+        printf '%s' "$list" | awk '{printf "%-8s %-6s %-6s %s\n", $2, $3, $4, $11}'
     elif [[ "$format" == "table" ]]; then
         # Table format with headers
-        echo "$list" | column -t
+        printf '%s' "$list" | column -t
     else
         # Default format: output as-is but without individual logging
-        echo "$list"
+        printf '%s\n' "$list"
     fi
 }
 
@@ -278,7 +278,7 @@ function process.run() {
                 # Normal mode: show output and capture it
                 output=$(eval "$exec_cmd" 2>&1)
                 exit_code=$?
-                echo "$output"
+                printf '%s\n' "$output"
             fi
         else
             # Don't capture output, just execute
@@ -322,7 +322,7 @@ function process.run() {
 
     # Return captured output if requested
     if [[ "$capture_output" == "true" ]]; then
-        echo "$output"
+        printf '%s\n' "$output"
     fi
 
     return $exit_code
@@ -412,8 +412,8 @@ function process.stop() {
     fi
 
     # Get process info before stopping
-    local process_name=$(process.getName "$pid" 2>/dev/null || echo "unknown")
-    local process_user=$(process.getUser "$pid" 2>/dev/null || echo "unknown")
+    local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+    local process_user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
 
     if [[ "$verbose" == "true" ]]; then
         console.debug "Process: $process_name (PID: $pid, User: $process_user)"
@@ -528,8 +528,8 @@ function process.abort() {
 
     if [[ "$verbose" == "true" ]]; then
         console.debug "Aborting process $pid"
-        local process_name=$(process.getName "$pid" 2>/dev/null || echo "unknown")
-        local process_user=$(process.getUser "$pid" 2>/dev/null || echo "unknown")
+        local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+        local process_user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
         console.debug "Process: $process_name (PID: $pid, User: $process_user)"
     fi
 
@@ -576,12 +576,12 @@ function process.getName() {
     local pid="$1"
 
     if [[ -z "$pid" ]]; then
-        echo ""
+        printf '%s\n' ""
         return 1
     fi
 
     if ! [[ "$pid" =~ ^[0-9]+$ ]]; then
-        echo ""
+        printf '%s\n' ""
         return 1
     fi
 
@@ -598,12 +598,12 @@ function process.getUser() {
     local pid="$1"
 
     if [[ -z "$pid" ]]; then
-        echo ""
+        printf '%s\n' ""
         return 1
     fi
 
     if ! [[ "$pid" =~ ^[0-9]+$ ]]; then
-        echo ""
+        printf '%s\n' ""
         return 1
     fi
 

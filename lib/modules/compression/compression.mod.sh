@@ -36,7 +36,7 @@ compression.uncompress() {
 
     if [[ -d ${destination} ]]; then
         console.warn "[$destination] directory is already available, removing directory"
-        directory.destory $destination
+        directory.remove $destination
     fi
 
     command="unzip ${file} -d ${destination}"
@@ -49,7 +49,7 @@ compression.uncompress() {
     result=$(${command} 2>&1)
 
     if [[ $? == 0 ]]; then
-        console.log "Successfully extracted ${file} to ${destination}"
+        printf "Successfully extracted %s to %s\n" "$file" "$destination"
         return 1
     fi
 

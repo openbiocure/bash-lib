@@ -20,7 +20,7 @@ function engine.modules() {
     # List all module names (from *.mod.sh files in lib/modules/)
     find "${BASH__PATH}/lib/modules" -name "*.mod.sh" 2>/dev/null | while read -r modfile; do
         local module_name=$(basename "$modfile" .mod.sh)
-        echo "$module_name"
+        printf "%s\n" "$module_name"
     done
 }
 
@@ -36,18 +36,18 @@ function engine.modules.byCategory() {
     # Parse options
     for arg in "$@"; do
         case $arg in
-        --system) category_filter="system" ;;
-        --core) category_filter="core" ;;
-        --utils) category_filter="utils" ;;
-        --file) category_filter="file" ;;
-        --http) category_filter="http" ;;
-        --math) category_filter="math" ;;
-        --date) category_filter="date" ;;
-        --compression) category_filter="compression" ;;
-        --directory) category_filter="directory" ;;
-        --permission) category_filter="permission" ;;
-        --users) category_filter="users" ;;
-        *) ;;
+            --system) category_filter="system" ;;
+            --core) category_filter="core" ;;
+            --utils) category_filter="utils" ;;
+            --file) category_filter="file" ;;
+            --http) category_filter="http" ;;
+            --math) category_filter="math" ;;
+            --date) category_filter="date" ;;
+            --compression) category_filter="compression" ;;
+            --directory) category_filter="directory" ;;
+            --permission) category_filter="permission" ;;
+            --users) category_filter="users" ;;
+            *) ;;
         esac
     done
 

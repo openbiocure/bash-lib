@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# bash-lib Core Initialization Script
-# Refactored for clean debug gating, Docker safety, and full environment setup
+# bash-lib Test-Specific Initialization Script
+# Based on lib/init.sh but with test-friendly debug output
 
 #---------------------------------------
-# DEBUG WRAPPER
+# DEBUG WRAPPER (Test Version)
 #---------------------------------------
 __debug() {
-  [[ "${BASH__VERBOSE}" == "debug" ]] && printf "DEBUG: %s\n" "$*" >&2
+  # Test version: output to /dev/null to avoid ShellSpec stderr issues
+  [[ "${BASH__VERBOSE}" == "debug" ]] && printf "DEBUG: %s\n" "$*" >/dev/null
 }
 
 #---------------------------------------
@@ -186,7 +187,7 @@ main_init() {
   fi
 
   __debug "Initialization complete."
-    return 0
+  return 0
 }
 
 #---------------------------------------
@@ -207,5 +208,6 @@ fi
 if [[ $? -eq 0 ]]; then
   __debug "bash-lib initialized successfully"
 else
-  __debug "bash-lib initialization failed"
+  printf "ERROR: bash-lib initialization failed\n" >&2
+  exit 1
 fi

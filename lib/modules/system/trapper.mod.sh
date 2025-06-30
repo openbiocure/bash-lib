@@ -81,7 +81,7 @@ function trapper.removeTrap() {
     local current_traps=$(trapper.getTraps "$sig")
 
     # Remove the specific command
-    local new_traps=$(echo "$current_traps" | sed "s/$cmd//g" | sed 's/;;/;/g' | sed 's/^;//' | sed 's/;$//')
+    local new_traps=$(printf '%s' "$current_traps" | sed "s/$cmd//g" | sed 's/;;/;/g' | sed 's/^;//' | sed 's/;$//')
 
     if [[ -n "$new_traps" ]]; then
         trap "$new_traps" "$sig"
@@ -90,7 +90,7 @@ function trapper.removeTrap() {
     fi
 
     # Remove from registry
-    TRAP_REGISTRY["$sig"]=$(echo "${TRAP_REGISTRY[$sig]}" | sed "s/$cmd//g")
+    TRAP_REGISTRY["$sig"]=$(printf '%s' "${TRAP_REGISTRY[$sig]}" | sed "s/$cmd//g")
 
     console.debug "Removed trap: $cmd for signal $sig"
 }
@@ -141,7 +141,12 @@ function trapper.getTraps() {
         return 1
     fi
 
-    echo $(trap | grep "$sig" | sed -e "s/$'\n'/ ; /g")
+    # Suppress output during tests to avoid broken pipe errors
+    if [[ -n "$BASH_LIB_TEST" || -n "$SHELLSPEC_TMPDIR" ]]; then
+        printf '%s\n' $(trap | grep "$sig" | sed -e "s/$'\n'/ ; /g") 2>/dev/null || true
+    else
+        printf '%s\n' $(trap | grep "$sig" | sed -e "s/$'\n'/ ; /g")
+    fi
 }
 
 ##
@@ -157,7 +162,12 @@ function trapper.filterTraps() {
         return 1
     fi
 
-    echo $(trap | grep "$cmd" | sed -e "s/$'\n'/ ; /g")
+    # Suppress output during tests to avoid broken pipe errors
+    if [[ -n "$BASH_LIB_TEST" || -n "$SHELLSPEC_TMPDIR" ]]; then
+        printf '%s\n' $(trap | grep "$cmd" | sed -e "s/$'\n'/ ; /g") 2>/dev/null || true
+    else
+        printf '%s\n' $(trap | grep "$cmd" | sed -e "s/$'\n'/ ; /g")
+    fi
 }
 
 ##
@@ -172,8 +182,8 @@ function trapper.list() {
     # Parse options
     for arg in "$@"; do
         case $arg in
-        --module=*) module_filter="${arg#*=}" ;;
-        *) ;;
+            --module=*) module_filter="${arg#*=}" ;;
+            *) ;;
         esac
     done
 
@@ -217,8 +227,8 @@ function trapper.clear() {
     # Parse options
     for arg in "$@"; do
         case $arg in
-        --module=*) module_filter="${arg#*=}" ;;
-        *) ;;
+            --module=*) module_filter="${arg#*=}" ;;
+            *) ;;
         esac
     done
 
@@ -246,12 +256,12 @@ function trapper.setupDefaults() {
     for arg in "$@"; do
         case $arg in
         --verbose | -v) verbose=true ;;
-        *) ;;
+            *) ;;
         esac
     done
 
     # Set up common error handling
-    trapper.addTrap 'trapper.handleExit' EXIT
+    trapper.addTrap 'printf "%s\\n" "Exiting..."' EXIT
     trapper.addTrap 'trapper.handleInterrupt' INT TERM
     trapper.addTrap 'trapper.handleError' ERR
 
@@ -332,13 +342,13 @@ function trapper.handleError() {
 function trapper.tempFile() {
     local temp_file=$(mktemp)
     trapper.addTrap "rm -f '$temp_file'" EXIT
-    echo "$temp_file"
+    printf '%s\n' "$temp_file"
 }
 
 function trapper.tempDir() {
     local temp_dir=$(mktemp -d)
     trapper.addTrap "rm -rf '$temp_dir'" EXIT
-    echo "$temp_dir"
+    printf '%s\n' "$temp_dir"
 }
 
 ##

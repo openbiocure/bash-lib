@@ -94,7 +94,7 @@ function directory.list() {
         ((count++))
         if [[ $count -ge $max_results ]]; then break; fi
     done < <(eval "$find_cmd -print0" 2>/dev/null)
-    echo "items in $dir"
+    printf '%s\n' "items in $dir"
     if [[ $count -eq 0 ]]; then
         console.info "No items found in directory: $dir"
     else
@@ -180,9 +180,9 @@ function directory.search() {
     if [[ $count -eq 0 ]]; then
         console.info "No items found matching pattern '$pattern' in $search_dir"
     else
-        echo "items matching $pattern"
+        printf '%s\n' "items matching $pattern"
         console.success "Found $count items matching pattern '$pattern'"
-    fi
+        fi
 }
 
 ##
@@ -219,8 +219,8 @@ function directory.remove() {
     fi
     if [[ ! -e "$target" ]]; then
         console.error "Target does not exist: $target"
-        return 1
-    fi
+            return 1
+        fi
     local was_file=0
     if [[ -f "$target" ]]; then was_file=1; fi
     local was_dir=0
@@ -239,9 +239,9 @@ function directory.remove() {
     fi
     if eval "$rm_cmd \"$target\"" 2>/dev/null; then
         if [[ $was_file -eq 1 ]]; then
-            echo "Removed file: $target"
+            printf '%s\n' "Removed file: $target"
         else
-            echo "Removed directory: $target"
+            printf '%s\n' "Removed directory: $target"
         fi
         console.success "Removed successfully: $target"
     else
@@ -297,7 +297,7 @@ function directory.copy() {
         if [[ "$recursive" == "true" ]]; then cp_cmd="cp -r"; fi
         if [[ "$preserve_attributes" == "true" ]]; then cp_cmd="$cp_cmd -p"; fi
         if eval "$cp_cmd \"$source\" \"$destination\"" 2>/dev/null; then
-            echo "Copied: $source -> $destination"
+            printf '%s\n' "Copied: $source -> $destination"
             console.success "Copied successfully: $source -> $destination"
         else
             console.error "Failed to copy: $source -> $destination"
@@ -310,7 +310,7 @@ function directory.copy() {
             if [[ "$recursive" == "true" ]]; then cp_cmd="cp -r"; fi
             if [[ "$preserve_attributes" == "true" ]]; then cp_cmd="$cp_cmd -p"; fi
             if eval "$cp_cmd \"$source\" \"$destination\"" 2>/dev/null; then
-                echo "Copied: $source -> $destination"
+                printf '%s\n' "Copied: $source -> $destination"
                 console.success "Copied successfully: $source -> $destination"
             else
                 console.error "Failed to copy: $source -> $destination"
@@ -322,14 +322,14 @@ function directory.copy() {
             if [[ ! -d "$dest_dir" ]]; then
                 mkdir -p "$dest_dir" || {
                     console.error "Failed to create destination directory: $dest_dir"
-                    return 1
-                }
+            return 1
+        }
             fi
             local cp_cmd="cp"
             if [[ "$recursive" == "true" ]]; then cp_cmd="cp -r"; fi
             if [[ "$preserve_attributes" == "true" ]]; then cp_cmd="$cp_cmd -p"; fi
             if eval "$cp_cmd \"$source\" \"$destination\"" 2>/dev/null; then
-                echo "Copied: $source -> $destination"
+                printf '%s\n' "Copied: $source -> $destination"
                 console.success "Copied successfully: $source -> $destination"
             else
                 console.error "Failed to copy: $source -> $destination"
@@ -361,11 +361,11 @@ function directory.move() {
 
     # Execute move
     if mv "$source" "$destination" 2>/dev/null; then
-        echo "Moved: $source -> $destination"
+        printf '%s\n' "Moved: $source -> $destination"
         console.success "Moved successfully: $source -> $destination"
     else
         console.error "Failed to move: $source -> $destination"
-        return 1
+                return 1
     fi
 }
 
@@ -412,7 +412,7 @@ function directory.create() {
     fi
 
     if eval "$mkdir_cmd \"$dir\"" 2>/dev/null; then
-        echo "Created directory: $dir"
+        printf '%s\n' "Created directory: $dir"
         console.success "Directory created successfully: $dir"
     else
         console.error "Failed to create directory: $dir"
@@ -450,11 +450,11 @@ function directory.info() {
         return 1
     fi
 
-    echo "File Information"
-    echo "================"
-    echo "Name: $(basename "$target")"
-    echo "Path: $(realpath "$target")"
-    echo "Type: $(if [[ -d "$target" ]]; then echo "Directory"; else echo "File"; fi)"
+    printf '%s\n' "File Information"
+    printf '%s\n' "================"
+    printf '%s\n' "Name: $(basename "$target")"
+    printf '%s\n' "Path: $(realpath "$target")"
+    printf '%s\n' "Type: $(if [[ -d "$target" ]]; then printf '%s' "Directory"; else printf '%s' "File"; fi)"
 
     if [[ "$detailed" == "true" ]]; then
         local size=$(du -sh "$target" 2>/dev/null | cut -f1)
@@ -464,17 +464,17 @@ function directory.info() {
         local modified=$(stat -c "%y" "$target" 2>/dev/null || stat -f "%Sm" "$target" 2>/dev/null)
         local inode=$(stat -c "%i" "$target" 2>/dev/null || stat -f "%i" "$target" 2>/dev/null)
 
-        echo "Size: $size"
-        echo "Permissions: $(directory.__permissions_to_description "$permissions")"
-        echo "Owner: $owner"
-        echo "Group: $group"
-        echo "Modified: $modified"
-        echo "Inode: $inode"
+        printf '%s\n' "Size: $size"
+        printf '%s\n' "Permissions: $(directory.__permissions_to_description "$permissions")"
+        printf '%s\n' "Owner: $owner"
+        printf '%s\n' "Group: $group"
+        printf '%s\n' "Modified: $modified"
+        printf '%s\n' "Inode: $inode"
 
         if [[ -d "$target" ]]; then
             local file_count=$(find "$target" -maxdepth 1 -type f | wc -l)
             local dir_count=$(find "$target" -maxdepth 1 -type d | wc -l)
-            echo "Contents: $file_count files, $((dir_count - 1)) subdirectories"
+            printf '%s\n' "Contents: $file_count files, $((dir_count - 1)) subdirectories"
         fi
     fi
 }
@@ -512,10 +512,10 @@ function directory.size() {
     local size
     if [[ "$human_readable" == "true" ]]; then
         size=$(du -sh "$target" 2>/dev/null | cut -f1)
-        echo "Directory size: $size"
+        printf '%s\n' "Directory size: $size"
     else
         size=$(du -sb "$target" 2>/dev/null | cut -f1)
-        echo "Directory size: ${size} bytes"
+        printf '%s\n' "Directory size: ${size} bytes"
     fi
 }
 
@@ -542,7 +542,7 @@ function directory.find_empty() {
         --files | -f) : ;; # always search for files now
         *)
             console.error "Unknown option: $1"
-            return 1
+        return 1
             ;;
         esac
     done
@@ -553,20 +553,20 @@ function directory.find_empty() {
     local count=0
     while IFS= read -r -d '' dir; do
         if [[ -z "$(ls -A "$dir" 2>/dev/null)" ]]; then
-            echo "📁 Empty directory: $dir"
-            ((count++))
+            printf '%s\n' "📁 Empty directory: $dir"
+        ((count++))
         fi
     done < <(find "$search_dir" -maxdepth "$max_depth" -type d -print0 2>/dev/null)
     while IFS= read -r -d '' file; do
         if [[ ! -s "$file" ]]; then
-            echo "📄 Empty file: $file"
+            printf '%s\n' "📄 Empty file: $file"
             ((count++))
         fi
     done < <(find "$search_dir" -maxdepth "$max_depth" -type f -print0 2>/dev/null)
-    echo "empty items found"
+    printf '%s\n' "empty items found"
     if [[ $count -gt 0 ]]; then
         console.success "Found $count empty items"
-    fi
+        fi
 }
 
 # Internal helper functions
@@ -575,7 +575,7 @@ function directory.__permissions_to_description() {
     local permissions="$1"
 
     if [[ -z "$permissions" || "$permissions" == "Unknown" ]]; then
-        echo "Unknown permissions"
+        printf '%s\n' "Unknown permissions"
         return
     fi
 
@@ -583,93 +583,93 @@ function directory.__permissions_to_description() {
 
     # File type
     case ${permissions:0:1} in
-    "-") description="Regular file" ;;
-    "d") description="Directory" ;;
-    "l") description="Symbolic link" ;;
-    "c") description="Character device" ;;
-    "b") description="Block device" ;;
-    "p") description="Named pipe" ;;
-    "s") description="Socket" ;;
-    *) description="Unknown type" ;;
+        "-") description="Regular file" ;;
+        "d") description="Directory" ;;
+        "l") description="Symbolic link" ;;
+        "c") description="Character device" ;;
+        "b") description="Block device" ;;
+        "p") description="Named pipe" ;;
+        "s") description="Socket" ;;
+        *) description="Unknown type" ;;
     esac
 
     description="$description with permissions: "
 
     # Owner permissions
     case ${permissions:1:3} in
-    "rwx") description="${description}owner can read, write, and execute" ;;
-    "rw-") description="${description}owner can read and write" ;;
-    "r-x") description="${description}owner can read and execute" ;;
-    "r--") description="${description}owner can read only" ;;
-    "-wx") description="${description}owner can write and execute" ;;
-    "-w-") description="${description}owner can write only" ;;
-    "--x") description="${description}owner can execute only" ;;
-    "---") description="${description}owner has no permissions" ;;
-    *) description="${description}owner has unusual permissions" ;;
+        "rwx") description="${description}owner can read, write, and execute" ;;
+        "rw-") description="${description}owner can read and write" ;;
+        "r-x") description="${description}owner can read and execute" ;;
+        "r--") description="${description}owner can read only" ;;
+        "-wx") description="${description}owner can write and execute" ;;
+        "-w-") description="${description}owner can write only" ;;
+        "--x") description="${description}owner can execute only" ;;
+        "---") description="${description}owner has no permissions" ;;
+        *) description="${description}owner has unusual permissions" ;;
     esac
 
     description="$description; "
 
     # Group permissions
     case ${permissions:4:3} in
-    "rwx") description="${description}group can read, write, and execute" ;;
-    "rw-") description="${description}group can read and write" ;;
-    "r-x") description="${description}group can read and execute" ;;
-    "r--") description="${description}group can read only" ;;
-    "-wx") description="${description}group can write and execute" ;;
-    "-w-") description="${description}group can write only" ;;
-    "--x") description="${description}group can execute only" ;;
-    "---") description="${description}group has no permissions" ;;
-    *) description="${description}group has unusual permissions" ;;
+        "rwx") description="${description}group can read, write, and execute" ;;
+        "rw-") description="${description}group can read and write" ;;
+        "r-x") description="${description}group can read and execute" ;;
+        "r--") description="${description}group can read only" ;;
+        "-wx") description="${description}group can write and execute" ;;
+        "-w-") description="${description}group can write only" ;;
+        "--x") description="${description}group can execute only" ;;
+        "---") description="${description}group has no permissions" ;;
+        *) description="${description}group has unusual permissions" ;;
     esac
 
     description="$description; "
 
     # Others permissions
     case ${permissions:7:3} in
-    "rwx") description="${description}others can read, write, and execute" ;;
-    "rw-") description="${description}others can read and write" ;;
-    "r-x") description="${description}others can read and execute" ;;
-    "r--") description="${description}others can read only" ;;
-    "-wx") description="${description}others can write and execute" ;;
-    "-w-") description="${description}others can write only" ;;
-    "--x") description="${description}others can execute only" ;;
-    "---") description="${description}others have no permissions" ;;
-    *) description="${description}others have unusual permissions" ;;
+        "rwx") description="${description}others can read, write, and execute" ;;
+        "rw-") description="${description}others can read and write" ;;
+        "r-x") description="${description}others can read and execute" ;;
+        "r--") description="${description}others can read only" ;;
+        "-wx") description="${description}others can write and execute" ;;
+        "-w-") description="${description}others can write only" ;;
+        "--x") description="${description}others can execute only" ;;
+        "---") description="${description}others have no permissions" ;;
+        *) description="${description}others have unusual permissions" ;;
     esac
 
-    echo "$description"
+    printf '%s\n' "$description"
 }
 
 function directory.__display_simple() {
     local item="$1"
     local type="$2"
-    if [[ -d "$item" ]]; then
-        echo "📁 $item"
-    elif [[ -L "$item" ]]; then
-        echo "🔗 $item"
-    else
-        echo "📄 $item"
-    fi
+        if [[ -d "$item" ]]; then
+        printf '%s\n' "📁 $item"
+        elif [[ -L "$item" ]]; then
+        printf '%s\n' "🔗 $item"
+        else
+        printf '%s\n' "📄 $item"
+        fi
 }
 
 function directory.__display_long() {
     local item="$1"
     local type="$2"
-    local name=$(basename "$item")
-    local permissions=$(stat -c "%A" "$item" 2>/dev/null || echo "??????")
-    local owner=$(stat -c "%U" "$item" 2>/dev/null || echo "unknown")
-    local size=$(stat -c "%s" "$item" 2>/dev/null | numfmt --to=iec 2>/dev/null || echo "0")
-    local modified=$(stat -c "%y" "$item" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
+        local name=$(basename "$item")
+    local permissions=$(stat -c "%A" "$item" 2>/dev/null || printf '%s\n' "??????")
+    local owner=$(stat -c "%U" "$item" 2>/dev/null || printf '%s\n' "unknown")
+    local size=$(stat -c "%s" "$item" 2>/dev/null | numfmt --to=iec 2>/dev/null || printf '%s\n' "0")
+    local modified=$(stat -c "%y" "$item" 2>/dev/null | cut -d' ' -f1 || printf '%s\n' "unknown")
 
-    local icon="📄"
-    if [[ -d "$item" ]]; then
-        icon="📁"
-    elif [[ -L "$item" ]]; then
-        icon="🔗"
-    fi
+        local icon="📄"
+        if [[ -d "$item" ]]; then
+            icon="📁"
+        elif [[ -L "$item" ]]; then
+            icon="🔗"
+        fi
 
-    printf "%-10s %-8s %-8s %-8s %s %s\n" "$permissions" "$owner" "$size" "$modified" "$icon" "$name"
+        printf "%-10s %-8s %-8s %-8s %s %s\n" "$permissions" "$owner" "$size" "$modified" "$icon" "$name"
 }
 
 ##
@@ -691,7 +691,7 @@ function directory.set_depth() {
     fi
 
     __DIR__DEFAULT_DEPTH="$depth"
-    echo "Default search depth set to $depth"
+    printf '%s\n' "Default search depth set to $depth"
     console.success "Default search depth set to $depth"
 }
 
@@ -714,7 +714,7 @@ function directory.set_max_results() {
     fi
 
     __DIR__DEFAULT_MAX_RESULTS="$max"
-    echo "Default max results set to $max"
+    printf '%s\n' "Default max results set to $max"
     console.success "Default max results set to $max"
 }
 

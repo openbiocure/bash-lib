@@ -15,7 +15,7 @@ import console
 #   Checks if a paticular string is empty returns true; false otherwise
 #
 function string.isEmpty() {
-    [[ -z $1 ]] && echo true || echo false
+    [[ -z $1 ]] && printf true || printf false
 }
 
 #
@@ -27,7 +27,7 @@ function string.replace() {
     local with=$2
     local str=$3
 
-    echo ${str//$1/$2}
+    printf "%s" "${str//$1/$2}"
 }
 
 #
@@ -36,7 +36,7 @@ function string.replace() {
 #
 function string.length() {
     local str="$1"
-    echo "${#str}"
+    printf "%d" "${#str}"
 }
 
 #
@@ -45,7 +45,7 @@ function string.length() {
 #
 function string.lower() {
     local str="$1"
-    echo "$str" | tr '[:upper:]' '[:lower:]'
+    printf "%s" "$str" | tr '[:upper:]' '[:lower:]'
 }
 
 #
@@ -54,7 +54,7 @@ function string.lower() {
 #
 function string.upper() {
     local str="$1"
-    echo "$str" | tr '[:lower:]' '[:upper:]'
+    printf "%s" "$str" | tr '[:lower:]' '[:upper:]'
 }
 
 #
@@ -64,7 +64,7 @@ function string.upper() {
 function string.trim() {
     local str="$1"
     # Remove leading and trailing whitespace
-    echo "$str" | awk '{gsub(/^ +| +$/,"",$0); print}'
+    printf "%s" "$str" | awk '{gsub(/^ +| +$/,"",$0); print}'
 }
 
 #
@@ -74,7 +74,7 @@ function string.trim() {
 function string.contains() {
     local str="$1"
     local substr="$2"
-    [[ "$str" == *"$substr"* ]] && echo true || echo false
+    [[ "$str" == *"$substr"* ]] && printf true || printf false
 }
 
 #
@@ -84,7 +84,7 @@ function string.contains() {
 function string.startswith() {
     local str="$1"
     local prefix="$2"
-    [[ "$str" == "$prefix"* ]] && echo true || echo false
+    [[ "$str" == "$prefix"* ]] && printf true || printf false
 }
 
 #
@@ -94,7 +94,7 @@ function string.startswith() {
 function string.endswith() {
     local str="$1"
     local suffix="$2"
-    [[ "$str" == *"$suffix" ]] && echo true || echo false
+    [[ "$str" == *"$suffix" ]] && printf true || printf false
 }
 
 #
@@ -103,7 +103,7 @@ function string.endswith() {
 #
 function string.basename() {
     local path="$1"
-    echo "${path##*/}"
+    printf "%s" "${path##*/}"
 }
 
 #

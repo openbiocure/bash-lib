@@ -438,7 +438,7 @@ function user.info() {
     local uid=$(id -u "$username")
     local gid=$(id -g "$username")
     local groups=$(id -Gn "$username")
-    local home=$(eval echo ~$username)
+    local home=$(eval printf '%s' ~$username)
     local shell=$(getent passwd "$username" | cut -d: -f7)
 
     console.info "User Information for $username:"
@@ -484,7 +484,7 @@ function user.set_password() {
     fi
 
     # Set password
-    if echo "$username:$password" | chpasswd; then
+    if printf '%s' "$username:$password" | chpasswd; then
         console.success "Set password for user: $username"
         return 0
     else

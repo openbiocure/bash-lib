@@ -170,7 +170,7 @@ function permission.get() {
     console.info "  Symbolic: $symbolic_mode"
     console.info "  Owner: $owner"
 
-    echo "$numeric_mode"
+    printf '%s\n' "$numeric_mode"
 }
 
 ##

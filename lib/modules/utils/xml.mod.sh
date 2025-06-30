@@ -66,10 +66,10 @@ function xml.get_value() {
     fi
 
     if [[ -n "$result" ]]; then
-        echo "$result"
+        printf "%s\n" "$result"
         return 0
     elif [[ -n "$default_value" ]]; then
-        echo "$default_value"
+        printf "%s\n" "$default_value"
         return 0
     else
         [[ "$silent" == false ]] && console.error "No value found for path: $path"
@@ -320,16 +320,16 @@ xml.__add_property() {
             # Check if this is the closing root tag and we haven't added the property yet
             if [[ "$line" == *"</"*">"* ]] && [[ "$found" == false ]]; then
                 # Add the property before the closing tag
-                echo "  <property>"
-                echo "    <name>$name</name>"
-                echo "    <value>$value</value>"
+                printf "  <property>\n"
+                printf "    <name>%s</name>\n" "$name"
+                printf "    <value>%s</value>\n" "$value"
                 if [[ -n "$description" ]]; then
-                    echo "    <description>$description</description>"
+                    printf "    <description>%s</description>\n" "$description"
                 fi
-                echo "  </property>"
+                printf "  </property>\n"
                 found=true
             fi
-            echo "$line"
+            printf "%s\n" "$line"
         done <"$file" >"$temp_file"
 
         mv "$temp_file" "$file"
@@ -382,7 +382,7 @@ xml.__extract_property_value() {
         # Check for property end
         elif [[ "$line" == *"</property>"* ]]; then
             if [[ "$in_property" == true && "$current_name" == "$property_name" ]]; then
-                echo "$current_value"
+                printf "%s\n" "$current_value"
                 found=true
                 break
             fi
@@ -522,13 +522,13 @@ xml.__extract_all_properties() {
                 if [[ "$should_output" == true ]]; then
                     case "$format" in
                     "key-value")
-                        echo "$current_name=$current_value"
+                        printf "%s=%s\n" "$current_name" "$current_value"
                         ;;
                     "json")
-                        echo "  \"$current_name\": \"$current_value\","
+                        printf "  \"%s\": \"%s\",\n" "$current_name" "$current_value"
                         ;;
                     *)
-                        echo "$current_name: $current_value"
+                        printf "%s: %s\n" "$current_name" "$current_value"
                         ;;
                     esac
                 fi
