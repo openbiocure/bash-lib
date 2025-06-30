@@ -1,23 +1,39 @@
 {
-    "bashIde.includeAllWorkspaceSymbols": true,
-    "bashIde.globalVariables": [
-        "BASH__PATH",
-        "BASH__VERBOSE",
-        "BASH__RELEASE"
-    ],
-    "bashIde.shellcheckArguments": [
-        "--shell=bash",
-        "--severity=style"
-    ],
-    "files.associations": {
-        "*.mod.sh": "shellscript",
-        "*.inc": "shellscript"
-    },
-    "emmet.includeLanguages": {
-        "shellscript": "html"
-    },
-    "shellcheck.executablePath": "/usr/local/bin/shellcheck",
-    "bashIde.highlightParsingErrors": true,
-    "bashIde.explainshellEndpoint": "https://explainshell.com/explain",
-    "bashIde.logLevel": "info"
-} 
+  "bashIde.includeAllWorkspaceSymbols": true,
+  "bashIde.globalVariables": ["BASH__PATH", "BASH__VERBOSE", "BASH__RELEASE"],
+  "bashIde.shellcheckArguments": ["--shell=bash", "--severity=style"],
+  "bashIde.highlightParsingErrors": true,
+  "bashIde.explainshellEndpoint": "https://explainshell.com/explain",
+  "bashIde.logLevel": "info",
+
+  "shellcheck.executablePath": "/usr/local/bin/shellcheck",
+
+  "files.associations": {
+    "*.mod.sh": "shellscript",
+    "*.inc": "shellscript",
+    "*_spec.sh": "shellscript"
+  },
+
+  "emmet.includeLanguages": {
+    "shellscript": "html"
+  },
+
+  "editor.formatOnSave": false,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+
+  "[shellscript]": {
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.detectIndentation": true,
+    "editor.defaultFormatter": null
+  },
+
+  "[plaintext]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null
+  }
+}

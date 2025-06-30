@@ -1,0 +1,27 @@
+name: Bash Library CI
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Bash 5 and ShellSpec
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bash
+          bash --version
+          curl -fsSL https://git.io/shellspec | bash -s -- --yes
+
+      - name: Run ShellSpec tests
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ~/.local/bin/shellspec --shell /usr/bin/bash --format documentation

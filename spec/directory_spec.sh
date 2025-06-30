@@ -1,12 +1,21 @@
+#!/usr/bin/env bash
+
 Describe 'directory'
-Include ./core/init.sh
-import directory
+setup() {
+    # Set BASH__PATH to the project root
+    export BASH__PATH="$(pwd)"
+    source "${BASH__PATH}/spec/init-spec.sh"
+    import directory
+    import string
+}
+Before setup
 
 It "directory.list function works"
     When call directory.list /tmp
     The status should be success
     The stdout should include "items in /tmp"
 End
+
 
 It "directory.list shows directory contents"
     When run directory.list /tmp
@@ -79,7 +88,7 @@ End
 It "directory.remove function works"
     # Create a test file first
     local test_file="/tmp/test_remove_$(date +%s).txt"
-    echo "test" > "$test_file"
+echo "test" >"$test_file"
     When call directory.remove "$test_file"
     The status should be success
     The stdout should include "Removed file"
@@ -89,7 +98,7 @@ It "directory.copy function works"
     # Create a test file first
     local test_file="/tmp/test_copy_$(date +%s).txt"
     local dest_dir="/tmp/copy_dest_$(date +%s)/"
-    echo "test" > "$test_file"
+echo "test" >"$test_file"
     When call directory.copy "$test_file" "$dest_dir"
     The status should be success
     The stdout should include "Copied"
@@ -100,7 +109,7 @@ It "directory.move function works"
     # Create a test file first
     local test_file="/tmp/test_move_$(date +%s).txt"
     local dest_file="/tmp/moved_$(date +%s).txt"
-    echo "test" > "$test_file"
+echo "test" >"$test_file"
     When call directory.move "$test_file" "$dest_file"
     The status should be success
     The stdout should include "Moved"
@@ -127,4 +136,4 @@ It "directory.set_max_results function works"
     The status should be success
     The stdout should include "Default max results set to 50"
 End
-End 
+End

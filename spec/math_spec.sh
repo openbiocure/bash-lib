@@ -1,7 +1,11 @@
-
 Describe 'Math'
-Include ./core/init.sh
+setup() {
+    export BASH__PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/" && pwd)"
+    source "${BASH__PATH}/lib/init.sh"
 import math
+}
+Before setup
+
     It "Add 1 + 2 = 3"
         When call math.add 1 2
         The output should equal 3

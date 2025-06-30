@@ -1,8 +1,11 @@
-
+setup() {
+    export BASH__PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/" && pwd)"
+    source "${BASH__PATH}/lib/init.sh"
+    import string
+}
+Before setup
 
 Describe 'string replace'
-Include ./core/init.sh
-import string;
  It "Run String Replace"
 
     When run string.replace mary cathy "How are you mary?"
