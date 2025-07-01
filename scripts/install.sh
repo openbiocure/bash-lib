@@ -107,23 +107,29 @@ init_shell_profile() {
 add_to_shell_profile() {
     local cmd_prefix=$(get_cmd_prefix)
 
+    # In Docker environments, we might not want to modify shell profiles
+    if [ "$BASH_LIB_DOCKER" = "true" ]; then
+        echo "🐳 Docker environment detected - skipping shell profile modifications"
+        return 0
+    fi
+
     # Add export for BASH__PATH
     if ! grep -q "export BASH__PATH=$BASH_LIB_PATH" "$SHELL_PROFILE" 2>/dev/null; then
-        echo "export BASH__PATH=$BASH_LIB_PATH" >>"$SHELL_PROFILE"
+        echo "export BASH__PATH=$BASH_LIB_PATH" >>"$SHELL_PROFILE" 2>/dev/null || echo "⚠️  Could not write to $SHELL_PROFILE"
     fi
 
     # Add source for init.sh
     if ! grep -q "source $BASH_LIB_PATH/lib/init.sh" "$SHELL_PROFILE" 2>/dev/null; then
-        echo "source $BASH_LIB_PATH/lib/init.sh" >>"$SHELL_PROFILE"
+        echo "source $BASH_LIB_PATH/lib/init.sh" >>"$SHELL_PROFILE" 2>/dev/null || echo "⚠️  Could not write to $SHELL_PROFILE"
     fi
 
     # Also add to .bash_profile if it exists and is different
     if [ -n "$BASH_PROFILE" ] && [ "$SHELL_PROFILE" != "$BASH_PROFILE" ] && [ -f "$BASH_PROFILE" ]; then
         if ! grep -q "export BASH__PATH=$BASH_LIB_PATH" "$BASH_PROFILE" 2>/dev/null; then
-            echo "export BASH__PATH=$BASH_LIB_PATH" >>"$BASH_PROFILE"
+            echo "export BASH__PATH=$BASH_LIB_PATH" >>"$BASH_PROFILE" 2>/dev/null || echo "⚠️  Could not write to $BASH_PROFILE"
         fi
         if ! grep -q "source $BASH_LIB_PATH/lib/init.sh" "$BASH_PROFILE" 2>/dev/null; then
-            echo "source $BASH_LIB_PATH/lib/init.sh" >>"$BASH_PROFILE"
+            echo "source $BASH_LIB_PATH/lib/init.sh" >>"$BASH_PROFILE" 2>/dev/null || echo "⚠️  Could not write to $BASH_PROFILE"
         fi
     fi
 }
@@ -132,13 +138,16 @@ add_to_shell_profile() {
 source_bash_lib() {
     export BASH__PATH="$BASH_LIB_PATH"
     if [ -f "$BASH_LIB_PATH/lib/init.sh" ]; then
-        source "$BASH_LIB_PATH/lib/init.sh"
-
-        # Verify import function is available
-        if command -v import >/dev/null 2>&1; then
-            echo "✅ bash-lib successfully loaded in current session"
+        # Use a subshell to prevent sourcing errors from affecting the main script
+        if (source "$BASH_LIB_PATH/lib/init.sh" 2>/dev/null); then
+            # Verify import function is available
+            if command -v import >/dev/null 2>&1; then
+                echo "✅ bash-lib successfully loaded in current session"
+            else
+                echo "⚠️  bash-lib loaded but 'import' function not found"
+            fi
         else
-            echo "⚠️  bash-lib loaded but 'import' function not found"
+            echo "⚠️  Could not source bash-lib (init.sh had errors)"
         fi
     else
         echo "⚠️  Could not source bash-lib (init.sh not found)"
