@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck curl unzip
+
+    - name: Run tests
+      run: |
+        for test in spec/*_spec.sh; do
+          if [ -f "$test" ]; then
+            echo "Running $test..."
+            bash "$test"
+          fi
+        done
+
+    - name: Run shellcheck
+      run: |
+        find . -name "*.sh" -not -path "./.git/*" -exec shellcheck {} \;
+
+    - name: Test installation script
+      run: |
+        bash scripts/install.sh help
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build and package
+      run: |
+        bash scripts/build.sh
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: bash-lib-package
+        path: dist/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: bash-lib-package
+        path: dist/
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
+        body: |
+          ## What's Changed
+
+          This release includes:
+          - Docker installation fixes
+          - Consolidated installation scripts
+          - Updated documentation
+
+          ## Installation
+
+          ### Using the install script (recommended):
+          ```bash
+          curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
+          ```
+
+          ### Using Homebrew:
+          ```bash
+          brew install openbiocure/bash-lib/bash-lib
+          ```
+
+          ### Manual installation:
+          Download the tarball and run the installer:
+          ```bash
+          ./install-package.sh
+          ```
+
+          ### Docker:
+          ```dockerfile
+          RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
+          ```
+      env:
+        GITHUB_TOKEN: ${{ secrets.BASH_LIB_TOKEN }}

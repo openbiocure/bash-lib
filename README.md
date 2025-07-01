@@ -2,6 +2,8 @@
 
 # Bash Library (bash-lib)
 
+[![Bash Library CI](https://github.com/openbiocure/bash-lib/actions/workflows/test.yml/badge.svg)](https://github.com/openbiocure/bash-lib/actions/workflows/test.yml)
+
 > **A comprehensive, modular bash library for developers who want powerful, readable shell scripting**
 
 Bash-lib transforms shell scripting from a cryptic art into a developer-friendly experience. With structured logging, HTTP clients, file management, user management, and more - all wrapped in clean, readable APIs.
@@ -13,7 +15,14 @@ Bash-lib transforms shell scripting from a cryptic art into a developer-friendly
 ### One-Command Installation
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh -o /tmp/install.sh && bash /tmp/install.sh
+# Install latest version
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
+
+# Install specific version
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s v1.0.0
+
+# Install specific build
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s 20241201-abc123
 ```
 
 ### Development Setup
