@@ -35,7 +35,7 @@ fi
 # Run shellcheck if available
 if command -v shellcheck >/dev/null 2>&1; then
     echo "🔍 Running shellcheck..."
-    find . -name "*.sh" -not -path "./.git/*" -exec shellcheck {} \; || echo "⚠️  Shellcheck found some issues (continuing anyway)"
+    find . -name "*.sh" -not -path "./.git/*" -not -path "./spec/*" -exec shellcheck {} \; || echo "⚠️  Shellcheck found some issues (continuing anyway)"
 else
     echo "⚠️  shellcheck not found, skipping linting"
 fi

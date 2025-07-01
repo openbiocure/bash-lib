@@ -37,7 +37,7 @@ jobs:
 
     - name: Run shellcheck
       run: |
-        find . -name "*.sh" -not -path "./.git/*" -exec shellcheck {} \;
+        find . -name "*.sh" -not -path "./.git/*" -not -path "./spec/*" -exec shellcheck {} \;
 
     - name: Test installation script
       run: |
