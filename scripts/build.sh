@@ -18,14 +18,19 @@ echo "🧹 Cleaning previous builds..."
 rm -rf "${DIST_DIR}" "${PACKAGE_DIR}"
 mkdir -p "${DIST_DIR}" "${PACKAGE_DIR}"
 
-# Run tests first
+# Run tests first (only if shellspec is available)
 echo "🧪 Running tests..."
-for test in spec/*_spec.sh; do
-    if [ -f "$test" ]; then
-        echo "Running $test..."
-        bash "$test"
-    fi
-done
+if command -v shellspec >/dev/null 2>&1; then
+    for test in spec/*_spec.sh; do
+        if [ -f "$test" ]; then
+            echo "Running $test..."
+            bash "$test"
+        fi
+    done
+else
+    echo "⚠️  shellspec not found, skipping tests"
+    echo "💡 Install shellspec with: curl -fsSL https://git.io/shellspec | sh -s -- --yes"
+fi
 
 # Run shellcheck if available
 if command -v shellcheck >/dev/null 2>&1; then
