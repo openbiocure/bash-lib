@@ -189,6 +189,8 @@ install_from_local() {
     fi
 }
 
+
+
 # Install from remote repository
 install_from_remote() {
     local requested_version="$1"
@@ -217,6 +219,8 @@ install_from_remote() {
         echo "📦 Latest version: $version"
     fi
 
+
+
     # Get the actual tarball name and download URL
     local tarball_name=$(get_tarball_name "$version")
     local download_url="https://github.com/$GITHUB_REPO/releases/download/$version/$tarball_name"
@@ -230,6 +234,18 @@ install_from_remote() {
     if ! curl -sSL -o "$tarball_name" "$download_url"; then
         echo "❌ Failed to download bash-lib. Please check your internet connection and try again."
         echo "   URL: $download_url"
+        cd - >/dev/null
+        rm -rf $TEMP_DIR
+        return 1
+    fi
+
+    # Verify the downloaded file is a valid tarball
+    if ! file "$tarball_name" | grep -q "gzip compressed data"; then
+        echo "❌ Downloaded file is not a valid tarball."
+        echo "   This usually means the release doesn't have the proper assets uploaded."
+        echo "   File type: $(file "$tarball_name")"
+        echo ""
+        echo "💡 This release may not have proper assets. Please try a different version or contact the maintainer."
         cd - >/dev/null
         rm -rf $TEMP_DIR
         return 1
@@ -369,8 +385,8 @@ show_help() {
     echo "  help       - Show this help message"
     echo ""
     echo "Arguments:"
-    echo "  VERSION    - Specific version to install (e.g., v1.0.0, 20241201-abc123)"
-    echo "               If not specified, installs the latest release"
+echo "  VERSION    - Specific version to install (e.g., v1.0.0, 20241201-abc123)"
+echo "               If not specified, installs the latest release"
     echo ""
     echo "Examples:"
     echo "  $0                    # Install latest bash-lib"
