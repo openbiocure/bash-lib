@@ -63,7 +63,22 @@ validate_version() {
 # Get the download URL for a specific version
 get_release_url() {
     local version="$1"
+    # Try the standard naming pattern first
     echo "https://github.com/$GITHUB_REPO/releases/download/$version/bash-lib-$version.tar.gz"
+}
+
+# Get the actual tarball name from GitHub release assets
+get_tarball_name() {
+    local version="$1"
+    local api_url="https://api.github.com/repos/$GITHUB_REPO/releases/tags/$version"
+    local tarball_name=$(curl -s "$api_url" | grep '"name":' | grep '\.tar\.gz"' | head -1 | sed -E 's/.*"([^"]+\.tar\.gz)".*/\1/')
+
+    if [ -z "$tarball_name" ]; then
+        # Fallback to standard naming pattern
+        echo "bash-lib-$version.tar.gz"
+    else
+        echo "$tarball_name"
+    fi
 }
 
 # Initialize shell profile detection
@@ -202,17 +217,19 @@ install_from_remote() {
         echo "📦 Latest version: $version"
     fi
 
-    # Get the download URL
-    local download_url=$(get_release_url "$version")
+    # Get the actual tarball name and download URL
+    local tarball_name=$(get_tarball_name "$version")
+    local download_url="https://github.com/$GITHUB_REPO/releases/download/$version/$tarball_name"
 
     # Create temporary directory for download
     TEMP_DIR=$(mktemp -d)
     cd $TEMP_DIR
 
     # Download the tarball
-    echo "📥 Downloading bash-lib $version..."
-    if ! curl -sSL -o "bash-lib-$version.tar.gz" "$download_url"; then
+    echo "📥 Downloading bash-lib $version ($tarball_name)..."
+    if ! curl -sSL -o "$tarball_name" "$download_url"; then
         echo "❌ Failed to download bash-lib. Please check your internet connection and try again."
+        echo "   URL: $download_url"
         cd - >/dev/null
         rm -rf $TEMP_DIR
         return 1
@@ -220,11 +237,38 @@ install_from_remote() {
 
     # Extract the tarball
     echo "📦 Extracting bash-lib..."
-    if ! tar -xzf "bash-lib-$version.tar.gz"; then
-        echo "❌ Failed to extract bash-lib tarball. Please ensure tar is available."
-        cd - >/dev/null
-        rm -rf $TEMP_DIR
-        return 1
+
+    # Check if tar is available
+    if command -v tar >/dev/null 2>&1; then
+        if ! tar -xzf "$tarball_name"; then
+            echo "❌ Failed to extract bash-lib tarball with tar."
+            cd - >/dev/null
+            rm -rf $TEMP_DIR
+            return 1
+        fi
+    else
+        echo "⚠️  tar not found, trying alternative extraction methods..."
+
+        # Try with gunzip + tar (some systems have them separately)
+        if command -v gunzip >/dev/null 2>&1; then
+            echo "📦 Using gunzip + tar..."
+            if gunzip -c "$tarball_name" | tar -xf -; then
+                echo "✅ Extracted successfully with gunzip + tar"
+            else
+                echo "❌ Failed to extract with gunzip + tar"
+                cd - >/dev/null
+                rm -rf $TEMP_DIR
+                return 1
+            fi
+        else
+            echo "❌ No suitable extraction tool found. Please install tar or gunzip."
+            echo "   On Ubuntu/Debian: sudo apt-get install tar"
+            echo "   On CentOS/RHEL: sudo yum install tar"
+            echo "   On macOS: tar should be pre-installed"
+            cd - >/dev/null
+            rm -rf $TEMP_DIR
+            return 1
+        fi
     fi
 
     # Find the extracted directory
