@@ -237,11 +237,38 @@ install_from_remote() {
 
     # Extract the tarball
     echo "📦 Extracting bash-lib..."
-    if ! tar -xzf "$tarball_name"; then
-        echo "❌ Failed to extract bash-lib tarball. Please ensure tar is available."
-        cd - >/dev/null
-        rm -rf $TEMP_DIR
-        return 1
+
+    # Check if tar is available
+    if command -v tar >/dev/null 2>&1; then
+        if ! tar -xzf "$tarball_name"; then
+            echo "❌ Failed to extract bash-lib tarball with tar."
+            cd - >/dev/null
+            rm -rf $TEMP_DIR
+            return 1
+        fi
+    else
+        echo "⚠️  tar not found, trying alternative extraction methods..."
+
+        # Try with gunzip + tar (some systems have them separately)
+        if command -v gunzip >/dev/null 2>&1; then
+            echo "📦 Using gunzip + tar..."
+            if gunzip -c "$tarball_name" | tar -xf -; then
+                echo "✅ Extracted successfully with gunzip + tar"
+            else
+                echo "❌ Failed to extract with gunzip + tar"
+                cd - >/dev/null
+                rm -rf $TEMP_DIR
+                return 1
+            fi
+        else
+            echo "❌ No suitable extraction tool found. Please install tar or gunzip."
+            echo "   On Ubuntu/Debian: sudo apt-get install tar"
+            echo "   On CentOS/RHEL: sudo yum install tar"
+            echo "   On macOS: tar should be pre-installed"
+            cd - >/dev/null
+            rm -rf $TEMP_DIR
+            return 1
+        fi
     fi
 
     # Find the extracted directory
