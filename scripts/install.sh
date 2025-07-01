@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 BASH_LIB_PATH="${BASH__PATH:-/opt/bash-lib}"
-BASH_LIB_ZIP_URL="https://github.com/openbiocure/bash-lib/archive/refs/heads/main.zip"
+GITHUB_REPO="openbiocure/bash-lib"
 SHELL_PROFILE=""
 BASH_PROFILE=""
 
@@ -33,6 +33,37 @@ get_cmd_prefix() {
     else
         echo "sudo"
     fi
+}
+
+# Get the latest release version from GitHub
+get_latest_release() {
+    local api_url="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+    local version=$(curl -s "$api_url" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+    if [ -z "$version" ]; then
+        echo "❌ Failed to get latest release version"
+        return 1
+    fi
+
+    echo "$version"
+}
+
+# Validate version format
+validate_version() {
+    local version="$1"
+    # Check if version follows semantic versioning or date format
+    if [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$version" =~ ^[0-9]{8}-[a-f0-9]+$ ]]; then
+        return 0
+    else
+        echo "❌ Invalid version format. Expected format: v1.0.0 or YYYYMMDD-commit"
+        return 1
+    fi
+}
+
+# Get the download URL for a specific version
+get_release_url() {
+    local version="$1"
+    echo "https://github.com/$GITHUB_REPO/releases/download/$version/bash-lib-$version.tar.gz"
 }
 
 # Initialize shell profile detection
@@ -145,96 +176,61 @@ install_from_local() {
 
 # Install from remote repository
 install_from_remote() {
+    local requested_version="$1"
+
     if is_docker_or_root; then
         echo "🐳 Installing bash-lib in Docker container..."
     else
-        echo "Installing bash-lib from remote repository..."
+        echo "Installing bash-lib from release..."
     fi
+
+    # Determine version to install
+    local version=""
+    if [ -n "$requested_version" ]; then
+        echo "📋 Using requested version: $requested_version"
+        if ! validate_version "$requested_version"; then
+            return 1
+        fi
+        version="$requested_version"
+    else
+        echo "📋 Getting latest release version..."
+        version=$(get_latest_release)
+        if [ $? -ne 0 ]; then
+            echo "❌ Failed to get latest release version. Please check your internet connection and try again."
+            return 1
+        fi
+        echo "📦 Latest version: $version"
+    fi
+
+    # Get the download URL
+    local download_url=$(get_release_url "$version")
 
     # Create temporary directory for download
     TEMP_DIR=$(mktemp -d)
     cd $TEMP_DIR
 
-    # Download the zip file
-    echo "📥 Downloading bash-lib..."
-    if ! curl -sSL -o bash-lib.zip $BASH_LIB_ZIP_URL; then
+    # Download the tarball
+    echo "📥 Downloading bash-lib $version..."
+    if ! curl -sSL -o "bash-lib-$version.tar.gz" "$download_url"; then
         echo "❌ Failed to download bash-lib. Please check your internet connection and try again."
         cd - >/dev/null
         rm -rf $TEMP_DIR
         return 1
     fi
 
-    # Try different extraction methods
+    # Extract the tarball
     echo "📦 Extracting bash-lib..."
-    local extracted=false
-
-    # Method 1: Try unzip
-    if command -v unzip >/dev/null 2>&1; then
-        if unzip -q bash-lib.zip; then
-            extracted=true
-        fi
-    fi
-
-    # Method 2: Try tar (some systems have tar but not unzip)
-    if [ "$extracted" = false ] && command -v tar >/dev/null 2>&1; then
-        if tar -xf bash-lib.zip; then
-            extracted=true
-        fi
-    fi
-
-    # Method 3: Try 7z if available
-    if [ "$extracted" = false ] && command -v 7z >/dev/null 2>&1; then
-        if 7z x bash-lib.zip >/dev/null 2>&1; then
-            extracted=true
-        fi
-    fi
-
-    # Method 4: Try installing unzip if possible
-    if [ "$extracted" = false ]; then
-        echo "⚠️  No extraction tool found. Attempting to install unzip..."
-        local cmd_prefix=$(get_cmd_prefix)
-
-        if command -v yum >/dev/null 2>&1; then
-            # RHEL/CentOS/Fedora
-            if $cmd_prefix yum install -y unzip >/dev/null 2>&1; then
-                if unzip -q bash-lib.zip; then
-                    extracted=true
-                fi
-            fi
-        elif command -v apt-get >/dev/null 2>&1; then
-            # Debian/Ubuntu
-            if $cmd_prefix apt-get update >/dev/null 2>&1 && $cmd_prefix apt-get install -y unzip >/dev/null 2>&1; then
-                if unzip -q bash-lib.zip; then
-                    extracted=true
-                fi
-            fi
-        elif command -v dnf >/dev/null 2>&1; then
-            # Fedora (newer)
-            if $cmd_prefix dnf install -y unzip >/dev/null 2>&1; then
-                if unzip -q bash-lib.zip; then
-                    extracted=true
-                fi
-            fi
-        fi
-    fi
-
-    # Check if extraction was successful
-    if [ "$extracted" = false ]; then
-        echo "❌ Failed to extract bash-lib. Please install unzip or tar:"
-        echo "   RHEL/CentOS: yum install -y unzip"
-        echo "   Ubuntu/Debian: apt-get install -y unzip"
-        echo "   Fedora: dnf install -y unzip"
+    if ! tar -xzf "bash-lib-$version.tar.gz"; then
+        echo "❌ Failed to extract bash-lib tarball. Please ensure tar is available."
         cd - >/dev/null
         rm -rf $TEMP_DIR
         return 1
     fi
 
-    # Find the extracted directory (it might be named differently)
+    # Find the extracted directory
     local extracted_dir=""
-    if [ -d "bash-lib-main" ]; then
-        extracted_dir="bash-lib-main"
-    elif [ -d "main" ]; then
-        extracted_dir="main"
+    if [ -d "bash-lib-$version" ]; then
+        extracted_dir="bash-lib-$version"
     else
         # Find any directory that looks like bash-lib
         extracted_dir=$(find . -maxdepth 1 -type d -name "*bash*lib*" | head -1)
@@ -283,6 +279,7 @@ install_from_remote() {
 
 # Main installation function
 install() {
+    local version="$1"
     local cmd_prefix=$(get_cmd_prefix)
 
     # Create the directory if it does not exist
@@ -292,7 +289,7 @@ install() {
     if [ -d "./core" ] && [ -d "./modules" ]; then
         install_from_local
     else
-        install_from_remote
+        install_from_remote "$version"
     fi
 }
 
@@ -320,18 +317,24 @@ uninstall() {
 
 # Show help
 show_help() {
-    echo "Usage: $0 [COMMAND]"
+    echo "Usage: $0 [COMMAND] [VERSION]"
     echo ""
     echo "Commands:"
     echo "  install    - Install bash-lib (default)"
     echo "  uninstall  - Uninstall bash-lib"
     echo "  help       - Show this help message"
     echo ""
+    echo "Arguments:"
+    echo "  VERSION    - Specific version to install (e.g., v1.0.0, 20241201-abc123)"
+    echo "               If not specified, installs the latest release"
+    echo ""
     echo "Examples:"
-    echo "  $0              # Install bash-lib"
-    echo "  $0 install      # Install bash-lib"
-    echo "  $0 uninstall    # Uninstall bash-lib"
-    echo "  $0 help         # Show help"
+    echo "  $0                    # Install latest bash-lib"
+    echo "  $0 install            # Install latest bash-lib"
+    echo "  $0 install v1.0.0     # Install specific version"
+    echo "  $0 install 20241201-abc123  # Install specific build"
+    echo "  $0 uninstall          # Uninstall bash-lib"
+    echo "  $0 help               # Show help"
 }
 
 # Main function with switch statement
@@ -340,7 +343,7 @@ main() {
 
     case "${1:-install}" in
     "install")
-        install
+        install "$2"
         ;;
     "uninstall")
         uninstall
@@ -349,9 +352,14 @@ main() {
         show_help
         ;;
     *)
-        echo "Unknown command: $1"
-        echo "Use '$0 help' for usage information."
-        exit 1
+        # If first argument is not a command, treat it as version for install
+        if [[ "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$1" =~ ^[0-9]{8}-[a-f0-9]+$ ]]; then
+            install "$1"
+        else
+            echo "Unknown command: $1"
+            echo "Use '$0 help' for usage information."
+            exit 1
+        fi
         ;;
     esac
 }
