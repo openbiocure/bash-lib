@@ -2,6 +2,8 @@
 
 # Bash Library (bash-lib)
 
+[![Bash Library CI](https://github.com/openbiocure/bash-lib/actions/workflows/test.yml/badge.svg)](https://github.com/openbiocure/bash-lib/actions/workflows/test.yml)
+
 > **A comprehensive, modular bash library for developers who want powerful, readable shell scripting**
 
 Bash-lib transforms shell scripting from a cryptic art into a developer-friendly experience. With structured logging, HTTP clients, file management, user management, and more - all wrapped in clean, readable APIs.
