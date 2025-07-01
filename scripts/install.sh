@@ -109,7 +109,11 @@ make_scripts_executable() {
 
 # Install from local directory
 install_from_local() {
-    echo "Installing bash-lib from local directory..."
+    if is_docker_or_root; then
+        echo "🐳 Installing bash-lib from local directory in Docker container..."
+    else
+        echo "Installing bash-lib from local directory..."
+    fi
 
     # Copy files to target directory
     echo "📁 Installing to $BASH_LIB_PATH..."
@@ -121,11 +125,18 @@ install_from_local() {
         source_bash_lib
 
         echo ""
-        echo "✅ bash-lib installed successfully from local directory!"
-        echo "📝 The 'import' function is now available in this session."
-        echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
-        echo ""
-        echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        if is_docker_or_root; then
+            echo "✅ bash-lib installed successfully from local directory in Docker container!"
+            echo "📝 The 'import' function is now available in this session."
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        else
+            echo "✅ bash-lib installed successfully from local directory!"
+            echo "📝 The 'import' function is now available in this session."
+            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        fi
     else
         echo "❌ Failed to copy files to $BASH_LIB_PATH"
         return 1
@@ -134,7 +145,11 @@ install_from_local() {
 
 # Install from remote repository
 install_from_remote() {
-    echo "Installing bash-lib from remote repository..."
+    if is_docker_or_root; then
+        echo "🐳 Installing bash-lib in Docker container..."
+    else
+        echo "Installing bash-lib from remote repository..."
+    fi
 
     # Create temporary directory for download
     TEMP_DIR=$(mktemp -d)
@@ -242,11 +257,18 @@ install_from_remote() {
         source_bash_lib
 
         echo ""
-        echo "✅ bash-lib installed successfully from remote repository!"
-        echo "📝 The 'import' function is now available in this session."
-        echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
-        echo ""
-        echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        if is_docker_or_root; then
+            echo "✅ bash-lib installed and loaded successfully in Docker container!"
+            echo "📝 The 'import' function is now available in this session."
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        else
+            echo "✅ bash-lib installed successfully from remote repository!"
+            echo "📝 The 'import' function is now available in this session."
+            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        fi
     else
         echo "❌ Failed to copy extracted files to $BASH_LIB_PATH"
         cd - >/dev/null

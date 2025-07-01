@@ -57,7 +57,7 @@ ENV BASH_LIB_DEBUG=true
 ENV BASH_LIB_DOCKER=true
 
 # Install bash-lib
-RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash
+RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
 
 # Test the installation
 RUN bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info 'Test successful!'"
@@ -173,7 +173,7 @@ RUN apt-get update && apt-get install -y \
     bash \
     timeout
 
-RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash
+RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
 ```
 
 ## Performance Considerations
@@ -246,7 +246,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install bash-lib
-RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash
+RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
