@@ -20,31 +20,13 @@ jobs:
         bash scripts/build.sh ${{ github.event.release.tag_name }}
 
     - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ github.token }}
       with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./dist/bash-lib-${{ github.event.release.tag_name }}.tar.gz
-        asset_name: bash-lib-${{ github.event.release.tag_name }}.tar.gz
-        asset_content_type: application/gzip
-
-    - name: Upload Release Assets (zip)
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./dist/bash-lib-${{ github.event.release.tag_name }}.zip
-        asset_name: bash-lib-${{ github.event.release.tag_name }}.zip
-        asset_content_type: application/zip
-
-    - name: Upload Homebrew Formula
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./dist/bash-lib.rb
-        asset_name: bash-lib.rb
-        asset_content_type: text/plain
+        files: |
+          dist/bash-lib-${{ github.event.release.tag_name }}.tar.gz
+          dist/bash-lib-${{ github.event.release.tag_name }}.zip
+          dist/bash-lib.rb
+        draft: false
+        prerelease: false
