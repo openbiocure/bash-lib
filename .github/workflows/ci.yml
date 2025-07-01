@@ -61,3 +61,45 @@ jobs:
       with:
         name: bash-lib-package
         path: dist/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: bash-lib-package
+        path: dist/
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
+        body: |
+          ## What's Changed
+
+          This release includes:
+          - Docker installation fixes
+          - Consolidated installation scripts
+          - Updated documentation
+          - Improved error handling and fallbacks
+
+          ## Installation
+
+          ### Using the install script (recommended):
+          ```bash
+          curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
+          ```
+
+          ### Or install specific version:
+          ```bash
+          curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s ${{ github.event.release.tag_name }}
+          ```
+      env:
+        GITHUB_TOKEN: ${{ github.token }}

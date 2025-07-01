@@ -8,8 +8,8 @@
 # 4. Require conversation resolution before merging
 
 # Status checks that must pass:
-# - test (Ubuntu latest)
-# - build (Ubuntu latest)
+# - test (Ubuntu latest) - from ci.yml
+# - build (Ubuntu latest) - from ci.yml (only on main branch)
 
 # To configure these settings:
 # 1. Go to Settings > Branches
@@ -23,7 +23,7 @@
 # GitHub CLI command to set this up:
 # gh api repos/:owner/:repo/branches/main/protection \
 #   --method PUT \
-#   --field required_status_checks='{"strict":true,"contexts":["test","build"]}' \
+#   --field required_status_checks='{"strict":true,"contexts":["test"]}' \
 #   --field enforce_admins=true \
 #   --field required_pull_request_reviews='{"required_approving_review_count":1}' \
 #   --field restrictions=null
