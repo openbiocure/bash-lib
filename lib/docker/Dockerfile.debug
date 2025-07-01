@@ -10,10 +10,10 @@ ENV BASH_LIB_DOCKER=true
 # Install core packages
 RUN apt-get update && apt-get install -y curl unzip bash && rm -rf /var/lib/apt/lists/*
 
-# Install bash-lib using temp script
-RUN curl -sSL -o /tmp/install-docker.sh https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh &&
-    bash /tmp/install-docker.sh &&
-    rm /tmp/install-docker.sh
+# Install bash-lib using the main install script (auto-detects Docker)
+RUN curl -sSL -o /tmp/install.sh https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh &&
+    bash /tmp/install.sh &&
+    rm /tmp/install.sh
 
 # Add local test script
 COPY test-docker-init.sh /usr/local/bin/test-docker-init.sh

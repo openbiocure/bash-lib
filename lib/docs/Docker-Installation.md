@@ -12,8 +12,8 @@ FROM ubuntu:22.04
 # Install required packages
 RUN apt-get update && apt-get install -y curl unzip bash
 
-# Install bash-lib using the Docker-optimized script
-RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash
+# Install bash-lib using the main install script (auto-detects Docker)
+RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
@@ -31,7 +31,7 @@ FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y curl unzip bash
 
 # Install bash-lib using the main script
-RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install.sh | bash
+RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
@@ -100,7 +100,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install bash-lib
-RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash
+RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bash.bashrc && \
@@ -128,7 +128,7 @@ RUN yum update -y && yum install -y \
     && yum clean all
 
 # Install bash-lib
-RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash
+RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/bashrc && \
@@ -155,7 +155,7 @@ RUN apk add --no-cache \
     bash
 
 # Install bash-lib
-RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash
+RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
 
 # Set up bash-lib for the container
 RUN echo "export BASH__PATH=/opt/bash-lib" >> /etc/profile && \
@@ -221,7 +221,7 @@ import console
 
 ```bash
 # Run installation with verbose output
-curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install-docker.sh | bash -x
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -x
 ```
 
 ## Best Practices

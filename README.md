@@ -13,7 +13,7 @@ Bash-lib transforms shell scripting from a cryptic art into a developer-friendly
 ### One-Command Installation
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh -o /tmp/install.sh && bash /tmp/install.sh
 ```
 
 ### Development Setup
