@@ -77,29 +77,32 @@ jobs:
         name: bash-lib-package
         path: dist/
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/*
-        body: |
-          ## What's Changed
-
-          This release includes:
-          - Docker installation fixes
-          - Consolidated installation scripts
-          - Updated documentation
-          - Improved error handling and fallbacks
-
-          ## Installation
-
-          ### Using the install script (recommended):
-          ```bash
-          curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
-          ```
-
-          ### Or install specific version:
-          ```bash
-          curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s ${{ github.event.release.tag_name }}
-          ```
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./dist/bash-lib-${{ github.event.release.tag_name }}.tar.gz
+        asset_name: bash-lib-${{ github.event.release.tag_name }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Release Assets (zip)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./dist/bash-lib-${{ github.event.release.tag_name }}.zip
+        asset_name: bash-lib-${{ github.event.release.tag_name }}.zip
+        asset_content_type: application/zip
+
+    - name: Upload Homebrew Formula
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./dist/bash-lib.rb
+        asset_name: bash-lib.rb
+        asset_content_type: text/plain
