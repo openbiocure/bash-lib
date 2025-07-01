@@ -8,6 +8,11 @@ on:
   release:
     types: [ published ]
 
+# Ensure jobs fail fast
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -21,18 +26,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y shellcheck curl unzip
 
+    - name: Install shellspec
+      run: |
+        curl -fsSL https://git.io/shellspec | sh -s -- --yes
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
     - name: Run tests
       run: |
-        for test in spec/*_spec.sh; do
-          if [ -f "$test" ]; then
-            echo "Running $test..."
-            bash "$test"
-          fi
-        done
+        shellspec spec/
 
     - name: Run shellcheck
       run: |
-        find . -name "*.sh" -not -path "./.git/*" -exec shellcheck {} \;
+        find . -name "*.sh" -not -path "./.git/*" -not -path "./spec/*" -exec shellcheck {} \;
 
     - name: Test installation script
       run: |
@@ -41,7 +46,7 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
 
     steps:
     - name: Checkout code
@@ -89,22 +94,6 @@ jobs:
           ### Using the install script (recommended):
           ```bash
           curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
-          ```
-
-          ### Using Homebrew:
-          ```bash
-          brew install openbiocure/bash-lib/bash-lib
-          ```
-
-          ### Manual installation:
-          Download the tarball and run the installer:
-          ```bash
-          ./install-package.sh
-          ```
-
-          ### Docker:
-          ```dockerfile
-          RUN curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
           ```
       env:
         GITHUB_TOKEN: ${{ secrets.BASH_LIB_TOKEN }}

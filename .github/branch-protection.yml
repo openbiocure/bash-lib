@@ -1,0 +1,29 @@
+# Branch Protection Rules
+# This file documents the required branch protection settings for the main branch
+
+# Required settings for main branch protection:
+# 1. Require a pull request before merging
+# 2. Require status checks to pass before merging
+# 3. Require branches to be up to date before merging
+# 4. Require conversation resolution before merging
+
+# Status checks that must pass:
+# - test (Ubuntu latest)
+# - build (Ubuntu latest)
+
+# To configure these settings:
+# 1. Go to Settings > Branches
+# 2. Add rule for "main" branch
+# 3. Enable "Require a pull request before merging"
+# 4. Enable "Require status checks to pass before merging"
+# 5. Select "test" and "build" as required status checks
+# 6. Enable "Require branches to be up to date before merging"
+# 7. Enable "Require conversation resolution before merging"
+
+# GitHub CLI command to set this up:
+# gh api repos/:owner/:repo/branches/main/protection \
+#   --method PUT \
+#   --field required_status_checks='{"strict":true,"contexts":["test","build"]}' \
+#   --field enforce_admins=true \
+#   --field required_pull_request_reviews='{"required_approving_review_count":1}' \
+#   --field restrictions=null

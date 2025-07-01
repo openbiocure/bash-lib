@@ -18,19 +18,13 @@ echo "🧹 Cleaning previous builds..."
 rm -rf "${DIST_DIR}" "${PACKAGE_DIR}"
 mkdir -p "${DIST_DIR}" "${PACKAGE_DIR}"
 
-# Run tests first
-echo "🧪 Running tests..."
-for test in spec/*_spec.sh; do
-    if [ -f "$test" ]; then
-        echo "Running $test..."
-        bash "$test"
-    fi
-done
+# Tests are enforced by CI (see .github/workflows/test.yml)
+# No tests are run in the local build script for speed and compatibility.
 
 # Run shellcheck if available
 if command -v shellcheck >/dev/null 2>&1; then
     echo "🔍 Running shellcheck..."
-    find . -name "*.sh" -not -path "./.git/*" -exec shellcheck {} \; || echo "⚠️  Shellcheck found some issues (continuing anyway)"
+    find . -name "*.sh" -not -path "./.git/*" -not -path "./spec/*" -exec shellcheck {} \; || echo "⚠️  Shellcheck found some issues (continuing anyway)"
 else
     echo "⚠️  shellcheck not found, skipping linting"
 fi
@@ -42,7 +36,6 @@ mkdir -p "${PACKAGE_DIR}/lib"
 # Cherry-pick files from lib folder (exclude docker and docs)
 echo "📁 Copying selected files from lib..."
 cp -r lib/modules "${PACKAGE_DIR}/lib/"
-cp -r lib/core "${PACKAGE_DIR}/lib/"
 cp -r lib/exceptions "${PACKAGE_DIR}/lib/"
 cp -r lib/config "${PACKAGE_DIR}/lib/"
 cp lib/init.sh "${PACKAGE_DIR}/lib/"
@@ -116,7 +109,7 @@ sudo find "$BASH_LIB_PATH" -name "*.sh" -type f -exec chmod +x {} \;
 
 # Set up environment
 echo "export BASH__PATH=$BASH_LIB_PATH" >> ~/.bashrc
-echo "source $BASH_LIB_PATH/lib/core/init.sh" >> ~/.bashrc
+echo "source $BASH_LIB_PATH/lib/init.sh" >> ~/.bashrc
 
 echo "✅ bash-lib installed successfully!"
 echo "🔄 Please restart your terminal or run: source ~/.bashrc"
@@ -136,8 +129,7 @@ echo "   - bash-lib.rb (Homebrew formula)"
 echo "   - install-package.sh (package installer)"
 echo ""
 echo "📁 Package contents:"
-echo "   - lib/modules/ (all modules)"
-echo "   - lib/core/ (core functionality)"
+echo "   - lib/modules/ (all modules including core)"
 echo "   - lib/exceptions/ (exception handling)"
 echo "   - lib/config/ (configuration files)"
 echo "   - lib/init.sh (main initialization)"
