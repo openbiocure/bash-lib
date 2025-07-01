@@ -1,0 +1,47 @@
+name: Release Workflow
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build and package
+      run: |
+        bash scripts/build.sh
+
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./dist/bash-lib-${{ github.event.release.tag_name }}.tar.gz
+        asset_name: bash-lib-${{ github.event.release.tag_name }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Release Assets (zip)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./dist/bash-lib-${{ github.event.release.tag_name }}.zip
+        asset_name: bash-lib-${{ github.event.release.tag_name }}.zip
+        asset_content_type: application/zip
+
+    - name: Upload Homebrew Formula
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./dist/bash-lib.rb
+        asset_name: bash-lib.rb
+        asset_content_type: text/plain
