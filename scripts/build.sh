@@ -6,8 +6,15 @@
 set -e
 
 # Configuration
-VERSION="${1:-$(date +%Y%m%d)-$(git rev-parse --short HEAD)}"
-PACKAGE_NAME="bash-lib-${VERSION}"
+# If a version is provided as argument, use it; otherwise use date-commit format
+if [ -n "$1" ]; then
+    VERSION="$1"
+    PACKAGE_NAME="bash-lib-${VERSION}"
+else
+    VERSION="$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
+    PACKAGE_NAME="bash-lib-${VERSION}"
+fi
+
 DIST_DIR="dist"
 PACKAGE_DIR="package/${PACKAGE_NAME}"
 
@@ -18,16 +25,6 @@ echo "🧹 Cleaning previous builds..."
 rm -rf "${DIST_DIR}" "${PACKAGE_DIR}"
 mkdir -p "${DIST_DIR}" "${PACKAGE_DIR}"
 
-# Tests are enforced by CI (see .github/workflows/test.yml)
-# No tests are run in the local build script for speed and compatibility.
-
-# Run shellcheck if available
-if command -v shellcheck >/dev/null 2>&1; then
-    echo "🔍 Running shellcheck..."
-    find . -name "*.sh" -not -path "./.git/*" -not -path "./spec/*" -exec shellcheck {} \; || echo "⚠️  Shellcheck found some issues (continuing anyway)"
-else
-    echo "⚠️  shellcheck not found, skipping linting"
-fi
 
 # Create package structure
 echo "📦 Creating package structure..."
@@ -67,7 +64,7 @@ cat > "${DIST_DIR}/bash-lib.rb" << EOF
 class BashLib < Formula
   desc "A comprehensive, modular bash library for developers who want powerful, readable shell scripting"
   homepage "https://github.com/openbiocure/bash-lib"
-  url "https://github.com/openbiocure/bash-lib/releases/download/v${VERSION}/${PACKAGE_NAME}.tar.gz"
+  url "https://github.com/openbiocure/bash-lib/releases/download/${VERSION}/${PACKAGE_NAME}.tar.gz"
   sha256 "$(shasum -a 256 "${DIST_DIR}/${PACKAGE_NAME}.tar.gz" | cut -d' ' -f1)"
   license "MIT"
 
