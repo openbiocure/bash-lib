@@ -536,9 +536,9 @@ xml.__extract_all_properties() {
             in_property=false
         elif [[ "$in_property" == true ]]; then
             if [[ "$line" =~ ^[[:space:]]*\<name\>(.*)\</name\>$ ]]; then
-                current_name="${BASH_REMATCH[1]}"
+                current_name="${BASH_REMATCH[1]:-}"
             elif [[ "$line" =~ ^[[:space:]]*\<value\>(.*)\</value\>$ ]]; then
-                current_value="${BASH_REMATCH[1]}"
+                current_value="${BASH_REMATCH[1]:-}"
             fi
         fi
     done <"$temp_file"

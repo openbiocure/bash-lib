@@ -3,13 +3,18 @@
 # Console Module for bash-lib (Modern, Robust, Test-Friendly)
 # Provides structured logging with color, verbosity, and safe output
 
+printf "DEBUG: console.mod.sh starting\n"
+
 # Call import.meta.loaded if the function exists
 if command -v import.meta.loaded >/dev/null 2>&1; then
-    import.meta.loaded "console" "${BASH__PATH:-/opt/bash-lib}/lib/modules/system/console.mod.sh" "1.0.0" 2>/dev/null || true
+    printf "DEBUG: console.mod.sh calling import.meta.loaded\n"
+    import.meta.loaded "console" "${BASH__PATH:-/opt/bash-lib}/modules/system/console.mod.sh" "1.0.0" 2>/dev/null || true
+    printf "DEBUG: console.mod.sh import.meta.loaded completed\n"
 fi
 
 # Import color definitions
-source "${BASH__PATH:-.}/lib/config/colors.inc"
+source "${BASH__PATH:-/opt/bash-lib}/lib/config/colors.inc"
+printf "DEBUG: console.mod.sh colors.inc sourced\n"
 
 # Configuration
 __CONSOLE__TIME__FORMAT="+%d/%m/%Y %H:%M:%S"
@@ -18,7 +23,7 @@ __CONSOLE__OUTPUT="" # Can be: stdout, stderr, /dev/null, or a file
 
 # Log level mapping (lowest to highest)
 # Use associative arrays if available (bash 4.0+), otherwise use regular arrays
-if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+if [[ "${BASH_VERSINFO[0]:-0}" -ge 4 ]]; then
     declare -gA __CONSOLE__LEVELS
     __CONSOLE__LEVELS=(
         [trace]=0
@@ -96,7 +101,7 @@ __console__output_stream() {
 # Get numeric value for a log level
 __console__level_value() {
     local level
-    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+    if [[ "${BASH_VERSINFO[0]:-0}" -ge 4 ]]; then
         level="${1,,}"
         printf "%d" "${__CONSOLE__LEVELS[$level]:-2}"
     else
@@ -127,7 +132,7 @@ __console__should_log() {
 # Core logging function
 __console__log() {
     local log_type
-    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+    if [[ "${BASH_VERSINFO[0]:-0}" -ge 4 ]]; then
         log_type="${1,,}"
     else
         # Fallback for older bash versions - convert to lowercase manually
@@ -138,7 +143,7 @@ __console__log() {
     local color
     local color_off="$Color_Off"
 
-    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+    if [[ "${BASH_VERSINFO[0]:-0}" -ge 4 ]]; then
         color="${__CONSOLE__COLORS[$log_type]:-$Color_Off}"
     else
         # Fallback for older bash versions
@@ -156,7 +161,7 @@ __console__log() {
     local host_name=$(hostname)
     local script_name=$(basename "$0" 2>/dev/null || printf "bash")
     local log_type_upper
-    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+    if [[ "${BASH_VERSINFO[0]:-0}" -ge 4 ]]; then
         log_type_upper="${log_type^^}"
     else
         # Fallback for older bash versions - convert to uppercase manually
@@ -212,16 +217,16 @@ console.empty() { printf ""; }
 # Verbosity control
 console.set_verbosity() {
     local level
-    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+    if [[ "${BASH_VERSINFO[0]:-0}" -ge 4 ]]; then
         level="${1,,}"
     else
         # Fallback for older bash versions - convert to lowercase manually
         level=$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')
     fi
 
-    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+    if [[ "${BASH_VERSINFO[0]:-0}" -ge 4 ]]; then
         # Workaround: re-declare the array if empty (for test/subshell issues)
-        if [[ -z "${__CONSOLE__LEVELS[debug]+isset}" ]]; then
+        if [[ -z "${__CONSOLE__LEVELS[debug]:-isset}" ]]; then
             declare -gA __CONSOLE__LEVELS=(
                 [trace]=0
                 [debug]=1
@@ -234,7 +239,7 @@ console.set_verbosity() {
             )
         fi
 
-        if [[ -n "${__CONSOLE__LEVELS[$level]}" ]]; then
+        if [[ -n "${__CONSOLE__LEVELS[$level]:-}" ]]; then
             export BASH__VERBOSE="$level"
             # Only log if debug level is allowed
             if __console__should_log "debug"; then

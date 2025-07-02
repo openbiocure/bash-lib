@@ -4,7 +4,7 @@ Describe 'directory'
 setup() {
     # Set BASH__PATH to the project root
     export BASH__PATH="$(pwd)"
-    source "${BASH__PATH}/spec/init-spec.sh"
+    source "${BASH__PATH:-}/spec/init-spec.sh"
     import directory
     import string
 }

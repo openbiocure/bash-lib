@@ -1,7 +1,7 @@
 Describe 'Math'
 setup() {
     export BASH__PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/" && pwd)"
-    source "${BASH__PATH}/lib/init.sh"
+    source "${BASH__PATH:-}/lib/init.sh"
 import math
 }
 Before setup
