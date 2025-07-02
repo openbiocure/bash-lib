@@ -13,7 +13,7 @@ import string
 import directory
 import exceptionBase
 
-[[ $BASH__DEBUG && $(basename "$ENTRY__POINT") == "$(basename $0)" ]] && source ./lib/init.sh
+[[ "${BASH__DEBUG:-}" && $(basename "${ENTRY__POINT:-}") == "$(basename $0)" ]] && source ./lib/init.sh
 
 ##
 ## (Usage)
