@@ -497,6 +497,10 @@ function directory.size() {
             human_readable=false
             shift
             ;;
+        --human-readable | -h)
+            human_readable=true
+            shift
+            ;;
         *)
             console.error "Unknown option: $1"
             return 1
