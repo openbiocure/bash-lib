@@ -50,7 +50,7 @@ import.meta.loaded() {
   local name="$1" path="$2" version="${3:-unknown}"
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
 
-  [[ -z "${!signal}" ]] && __debug "Loaded module: $name [$version] from $path"
+  [[ -z "${!signal:-}" ]] && __debug "Loaded module: $name [$version] from $path"
 }
 
 import.meta.all() {
@@ -69,7 +69,7 @@ import.meta.info() {
   }
 
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
-  [[ -n "${!signal}" ]] && printf "Module '%s' is loaded\n" "$name" || printf "Module '%s' is not loaded\n" "$name"
+  [[ -n "${!signal:-}" ]] && printf "Module '%s' is loaded\n" "$name" || printf "Module '%s' is not loaded\n" "$name"
 }
 
 #---------------------------------------
@@ -84,7 +84,7 @@ import() {
 
   local src="${BASH__PATH:-/opt/bash-lib}"
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
-  [[ -n "${!signal}" ]] && return 0
+  [[ -n "${!signal:-}" ]] && return 0
 
   local mod_path=""
   case "$name" in
@@ -106,7 +106,7 @@ import() {
   if [[ -f "$mod_path" ]]; then
     __debug "Importing $name from $mod_path"
     source "$mod_path"
-    [[ -n "${!signal}" || "$(type -t "${name}.help")" == "function" ]] && return 0
+    [[ -n "${!signal:-}" || "$(type -t "${name}.help")" == "function" ]] && return 0
     printf "\e[33mWarning:\e[0m '%s' loaded but import signal not set\n" "$name" >&2
     return 0
   else
