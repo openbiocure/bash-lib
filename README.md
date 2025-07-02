@@ -198,8 +198,6 @@ make install-deps  # Install development dependencies
 make test          # Run unit tests
 make man           # Generate Manual.md from module help
 make install       # Install bash-lib locally
-make uninstall     # Uninstall bash-lib
-make clean         # Remove build artifacts
 ```
 
 ### Running Tests
@@ -305,7 +303,13 @@ env | grep BASH__
 ls modules/*/
 ```
 
-## 🤝 Contributing
+## 🤝 Contributing & Conduct
+
+All contributors must follow our [Code of Conduct](lib/docs/CODE_OF_CONDUCT.md).
+
+> **Shell Scripting Policy:**
+>
+> This project enforces strict shell scripting best practices, including the mandatory use of `set -u` (nounset) and proper guarding of all variable and array expansions. Please read the [Code of Conduct](lib/docs/CODE_OF_CONDUCT.md) for details.
 
 ### Getting Started
 
