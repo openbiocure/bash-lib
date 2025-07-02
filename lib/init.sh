@@ -7,7 +7,7 @@
 # DEBUG WRAPPER
 #---------------------------------------
 __debug() {
-  [[ "${BASH__VERBOSE}" == "debug" ]] && printf "DEBUG: %s\n" "$*" >&2
+  [[ "${BASH__VERBOSE:-}" == "debug" ]] && printf "DEBUG: %s\n" "$*" >&2
 }
 
 #---------------------------------------
@@ -21,7 +21,7 @@ fi
 #---------------------------------------
 # Docker Timeout Setup
 #---------------------------------------
-if [[ "${BASH_LIB_DOCKER}" == "true" ]]; then
+if [[ "${BASH_LIB_DOCKER:-}" == "true" ]]; then
   TIMEOUT_SECONDS=30
   __debug "Docker detected. Timeout set to ${TIMEOUT_SECONDS}s"
 fi
@@ -195,7 +195,7 @@ main_init() {
 # Initialize the result variable
 init_result=0
 
-if [[ "${BASH_LIB_DOCKER}" == "true" ]]; then
+if [[ "${BASH_LIB_DOCKER:-}" == "true" ]]; then
     # Simplified Docker initialization without timeout
     main_init
     init_result=$?

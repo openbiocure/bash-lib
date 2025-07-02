@@ -247,7 +247,7 @@ console.set_verbosity() {
     else
         # Fallback for older bash versions
         local var_name="__CONSOLE__LEVELS_${level}"
-        if [[ -n "${!var_name}" ]]; then
+        if [[ -n "${!var_name:-}" ]]; then
             export BASH__VERBOSE="$level"
             # Only log if debug level is allowed
             if __console__should_log "debug"; then
