@@ -7,7 +7,9 @@
 # DEBUG WRAPPER
 #---------------------------------------
 __debug() {
+  printf "DEBUG: __debug() called with: %s\n" "$*"
   [[ "${BASH__VERBOSE:-}" == "debug" ]] && printf "DEBUG: %s\n" "$*" >&2
+  printf "DEBUG: __debug() completed\n"
 }
 
 #---------------------------------------
@@ -30,15 +32,18 @@ fi
 # Environment Validation
 #---------------------------------------
 validate_environment() {
+  printf "DEBUG: validate_environment() starting\n"
   __debug "Validating environment..."
 
   for var in PATH; do
+    printf "DEBUG: validate_environment() checking var: %s\n" "$var"
     [[ -z "${!var}" ]] && {
       printf "ERROR: Required environment variable %s is not set\n" "$var" >&2
       return 1
     }
   done
 
+  printf "DEBUG: validate_environment() completed\n"
   __debug "Environment validation passed"
   return 0
 }
@@ -76,6 +81,7 @@ import.meta.info() {
 # Module Import: Standard + Force
 #---------------------------------------
 import() {
+  printf "DEBUG: import() called with args: %s\n" "$*"
   local name="$1" ext="${2:-mod.sh}"
   [[ -z "$name" ]] && {
     printf "\e[31mError:\e[0m import requires a module name\n" >&2
@@ -84,7 +90,11 @@ import() {
 
   local src="${BASH__PATH:-/opt/bash-lib}"
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
-  [[ -n "${!signal:-}" ]] && return 0
+  printf "DEBUG: import() checking signal: %s\n" "$signal"
+  [[ -n "${!signal:-}" ]] && {
+    printf "DEBUG: import() module %s already imported, returning\n" "$name"
+    return 0
+  }
 
   local mod_path=""
   case "$name" in
@@ -103,10 +113,16 @@ import() {
     ;;
   esac
 
+  printf "DEBUG: import() mod_path: %s\n" "$mod_path"
   if [[ -f "$mod_path" ]]; then
+    printf "DEBUG: import() sourcing %s\n" "$mod_path"
     __debug "Importing $name from $mod_path"
     source "$mod_path"
-    [[ -n "${!signal:-}" || "$(type -t "${name}.help")" == "function" ]] && return 0
+    printf "DEBUG: import() sourced %s\n" "$mod_path"
+    [[ -n "${!signal:-}" || "$(type -t "${name}.help")" == "function" ]] && {
+      printf "DEBUG: import() module %s loaded successfully\n" "$name"
+      return 0
+    }
     printf "\e[33mWarning:\e[0m '%s' loaded but import signal not set\n" "$name" >&2
     return 0
   else
@@ -140,16 +156,19 @@ import.meta.reload() {
 # Main Initialization Logic
 #---------------------------------------
 main_init() {
+  printf "DEBUG: Starting main_init\n"
   __debug "Beginning initialization process..."
 
   # Step 1: Validate environment
+  printf "DEBUG: Step 1 - validate_environment\n"
   if ! validate_environment; then
     printf "ERROR: Environment validation failed\n" >&2
     return 1
   fi
 
   # Step 2: Auto-detect BASH__PATH
-  if [[ -z "${BASH__PATH}" ]]; then
+  printf "DEBUG: Step 2 - auto-detect BASH__PATH\n"
+  if [[ -z "${BASH__PATH:-}" ]]; then
     local here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
     local walk="$here"
     while [[ "$walk" != "/" ]]; do
@@ -165,12 +184,16 @@ main_init() {
   fi
 
   # Step 3: Load build config
+  printf "DEBUG: Step 3 - load build config\n"
   [[ -f "$BASH__PATH/lib/config/build.inc" ]] && source "$BASH__PATH/lib/config/build.inc" 2>/dev/null
 
   # Step 4: Core imports
+  printf "DEBUG: Step 4 - import console\n"
   import console
+  printf "DEBUG: Step 4 - console imported\n"
 
   # Step 5: Setup verbosity
+  printf "DEBUG: Step 5 - setup verbosity\n"
   export BASH__VERBOSE="${BASH__VERBOSE:-info}"
 
   if command -v console.debug >/dev/null; then
@@ -185,6 +208,7 @@ main_init() {
     fi
   fi
 
+  printf "DEBUG: main_init complete\n"
   __debug "Initialization complete."
     return 0
 }

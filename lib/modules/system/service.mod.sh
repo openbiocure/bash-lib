@@ -98,7 +98,7 @@ service.start() {
 
     # Check if service is already running
     if service.is_running "$service_name"; then
-        console.warn "Service '$service_name' is already running (PID: ${SERVICE_PIDS[$service_name]})"
+        console.warn "Service '$service_name' is already running (PID: ${SERVICE_PIDS[$service_name]:-})"
         return 0
     fi
 
@@ -179,12 +179,12 @@ service.wait_for_ready() {
     done
 
     # Validate service exists
-    if [[ -z "${SERVICE_PIDS[$service_name]}" ]]; then
+    if [[ -z "${SERVICE_PIDS[$service_name]:-}" ]]; then
         console.error "Service '$service_name' not found"
         return 1
     fi
 
-    local pid="${SERVICE_PIDS[$service_name]}"
+    local pid="${SERVICE_PIDS[$service_name]:-}"
     local start_time=$(date +%s)
     local elapsed=0
 
@@ -290,12 +290,12 @@ service.health() {
     done
 
     # Check if service exists
-    if [[ -z "${SERVICE_PIDS[$service_name]}" ]]; then
+    if [[ -z "${SERVICE_PIDS[$service_name]:-}" ]]; then
         console.error "Service '$service_name' not found"
         return 1
     fi
 
-    local pid="${SERVICE_PIDS[$service_name]}"
+    local pid="${SERVICE_PIDS[$service_name]:-}"
 
     # Check if process is running
     if ! process.exists "$pid"; then
@@ -339,7 +339,7 @@ service.health() {
     else
         if [[ "$verbose" == true ]]; then
             console.error "Service '$service_name' health check failed:"
-            for issue in "${issues[@]}"; do
+            for issue in "${issues[@]:-}"; do
                 console.error "  - $issue"
             done
         fi
@@ -357,7 +357,7 @@ service.is_running() {
         return 1
     fi
 
-    local pid="${SERVICE_PIDS[$service_name]}"
+    local pid="${SERVICE_PIDS[$service_name]:-}"
 
     if [[ -z "$pid" ]]; then
         return 1
@@ -410,7 +410,7 @@ service.stop() {
         return 1
     fi
 
-    local pid="${SERVICE_PIDS[$service_name]}"
+    local pid="${SERVICE_PIDS[$service_name]:-}"
 
     if [[ -z "$pid" ]]; then
         console.warn "Service '$service_name' not found"
@@ -468,15 +468,15 @@ service.list() {
         esac
     done
 
-    if [[ ${#SERVICE_PIDS[@]} -eq 0 ]]; then
+    if [[ ${#SERVICE_PIDS[@]:-0} -eq 0 ]]; then
         console.info "No services are currently tracked"
         return 0
     fi
 
     console.info "Services:"
-    for service_name in "${!SERVICE_PIDS[@]}"; do
-        local pid="${SERVICE_PIDS[$service_name]}"
-        local status="${SERVICE_STATUS[$service_name]}"
+    for service_name in "${!SERVICE_PIDS[@]:-}"; do
+        local pid="${SERVICE_PIDS[$service_name]:-}"
+        local status="${SERVICE_STATUS[$service_name]:-}"
 
         if process.exists "$pid"; then
             if [[ "$verbose" == true ]]; then
@@ -502,7 +502,7 @@ service.info() {
         return 1
     fi
 
-    local pid="${SERVICE_PIDS[$service_name]}"
+    local pid="${SERVICE_PIDS[$service_name]:-}"
 
     if [[ -z "$pid" ]]; then
         console.error "Service '$service_name' not found"
@@ -511,7 +511,7 @@ service.info() {
 
     console.info "Service: $service_name"
     console.info "  PID: $pid"
-    console.info "  Status: ${SERVICE_STATUS[$service_name]}"
+    console.info "  Status: ${SERVICE_STATUS[$service_name]:-}"
 
     if process.exists "$pid"; then
         local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")

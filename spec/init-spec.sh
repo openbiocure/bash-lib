@@ -150,7 +150,7 @@ main_init() {
   fi
 
   # Step 2: Auto-detect BASH__PATH
-  if [[ -z "${BASH__PATH}" ]]; then
+  if [[ -z "${BASH__PATH:-}" ]]; then
     local here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
     local walk="$here"
     while [[ "$walk" != "/" ]]; do

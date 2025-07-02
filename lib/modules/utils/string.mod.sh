@@ -173,8 +173,8 @@ function string.render() {
                 missing_vars+=("$var")
             fi
         done < <(echo "$template" | grep -oE '\$\{?[A-Za-z_][A-Za-z0-9_]*\}?')
-        if [[ ${#missing_vars[@]} -gt 0 ]]; then
-            echo "string.render: missing variables: ${missing_vars[*]}" >&2
+        if [[ ${#missing_vars[@]:-0} -gt 0 ]]; then
+            echo "string.render: missing variables: ${missing_vars[*]:-}" >&2
             return 1
         fi
     fi

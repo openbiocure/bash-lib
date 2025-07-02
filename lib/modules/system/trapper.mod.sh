@@ -90,7 +90,7 @@ function trapper.removeTrap() {
     fi
 
     # Remove from registry
-    TRAP_REGISTRY["$sig"]=$(printf '%s' "${TRAP_REGISTRY[$sig]}" | sed "s/$cmd//g")
+    TRAP_REGISTRY["$sig"]=$(printf '%s' "${TRAP_REGISTRY[$sig]:-}" | sed "s/$cmd//g")
 
     console.debug "Removed trap: $cmd for signal $sig"
 }
@@ -109,7 +109,7 @@ function trapper.removeModuleTraps() {
         return 1
     fi
 
-    local module_traps="${MODULE_TRAPS[$module]}"
+    local module_traps="${MODULE_TRAPS[$module]:-}"
     if [[ -n "$module_traps" ]]; then
         for trap_cmd in $module_traps; do
             # Remove from all common signals
@@ -189,7 +189,7 @@ function trapper.list() {
 
     if [[ -n "$module_filter" ]]; then
         console.info "Traps for module '$module_filter':"
-        local module_traps="${MODULE_TRAPS[$module_filter]}"
+        local module_traps="${MODULE_TRAPS[$module_filter]:-}"
         if [[ -n "$module_traps" ]]; then
             for trap_cmd in $module_traps; do
                 console.info "  $trap_cmd"
@@ -199,8 +199,8 @@ function trapper.list() {
         fi
     else
         console.info "All registered traps:"
-        for sig in "${!TRAP_REGISTRY[@]}"; do
-            local traps="${TRAP_REGISTRY[$sig]}"
+        for sig in "${!TRAP_REGISTRY[@]:-}"; do
+            local traps="${TRAP_REGISTRY[$sig]:-}"
             if [[ -n "$traps" ]]; then
                 console.info "  Signal $sig: $traps"
             fi
@@ -208,8 +208,8 @@ function trapper.list() {
 
         console.info ""
         console.info "Module-specific traps:"
-        for module in "${!MODULE_TRAPS[@]}"; do
-            local module_traps="${MODULE_TRAPS[$module]}"
+        for module in "${!MODULE_TRAPS[@]:-}"; do
+            local module_traps="${MODULE_TRAPS[$module]:-}"
             console.info "  $module: $module_traps"
         done
     fi
@@ -280,8 +280,8 @@ function trapper.handleExit() {
         return 0
     fi
     # Run cleanup for all modules
-    for module in "${!MODULE_TRAPS[@]}"; do
-        local module_traps="${MODULE_TRAPS[$module]}"
+    for module in "${!MODULE_TRAPS[@]:-}"; do
+        local module_traps="${MODULE_TRAPS[$module]:-}"
         for trap_cmd in $module_traps; do
             if [[ "$trap_cmd" == *"cleanup"* || "$trap_cmd" == *"exit"* ]]; then
                 eval "$trap_cmd" 2>/dev/null || true
@@ -300,8 +300,8 @@ function trapper.handleInterrupt() {
     console.warn "Received interrupt signal, cleaning up..."
 
     # Run interrupt handlers for all modules
-    for module in "${!MODULE_TRAPS[@]}"; do
-        local module_traps="${MODULE_TRAPS[$module]}"
+    for module in "${!MODULE_TRAPS[@]:-}"; do
+        local module_traps="${MODULE_TRAPS[$module]:-}"
         for trap_cmd in $module_traps; do
             if [[ "$trap_cmd" == *"interrupt"* || "$trap_cmd" == *"cleanup"* ]]; then
                 eval "$trap_cmd" 2>/dev/null || true
@@ -317,14 +317,14 @@ function trapper.handleInterrupt() {
 ##
 function trapper.handleError() {
     local exit_code=$?
-    local line_number=${BASH_LINENO[0]}
-    local script_name=${BASH_SOURCE[1]}
+    local line_number=${BASH_LINENO[0]:-0}
+    local script_name=${BASH_SOURCE[1]:-}
 
     console.error "Error occurred in $script_name at line $line_number (exit code: $exit_code)"
 
     # Run error handlers for all modules
-    for module in "${!MODULE_TRAPS[@]}"; do
-        local module_traps="${MODULE_TRAPS[$module]}"
+    for module in "${!MODULE_TRAPS[@]:-}"; do
+        local module_traps="${MODULE_TRAPS[$module]:-}"
         for trap_cmd in $module_traps; do
             if [[ "$trap_cmd" == *"error"* || "$trap_cmd" == *"cleanup"* ]]; then
                 eval "$trap_cmd" 2>/dev/null || true

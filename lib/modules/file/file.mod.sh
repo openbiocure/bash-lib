@@ -260,14 +260,14 @@ function file.list() {
         results+=("$line")
     done < <(eval "$find_cmd" 2>/dev/null)
 
-    if [[ ${#results[@]} -eq 0 ]]; then
+    if [[ ${#results[@]:-0} -eq 0 ]]; then
         console.info "No files found in $path"
         return 0
     fi
 
-    console.info "Found ${#results[@]} files in $path:"
+    console.info "Found ${#results[@]:-0} files in $path:"
 
-    for file in "${results[@]}"; do
+    for file in "${results[@]:-}"; do
         if [[ "$show_details" == "true" ]]; then
             local size=$(stat -c "%s" "$file" 2>/dev/null | numfmt --to=iec 2>/dev/null || echo "Unknown")
             local modified=$(stat -c "%y" "$file" 2>/dev/null | cut -d' ' -f1 || echo "Unknown")
@@ -338,13 +338,13 @@ function file.search() {
         results+=("$line")
     done < <(eval "$find_cmd")
 
-    if [[ ${#results[@]} -eq 0 ]]; then
+    if [[ ${#results[@]:-0} -eq 0 ]]; then
         console.info "No files found containing '$search_term' in $path"
         return 0
     fi
 
-    console.info "Found ${#results[@]} files containing '$search_term' in $path:"
-    for file in "${results[@]}"; do
+    console.info "Found ${#results[@]:-0} files containing '$search_term' in $path:"
+    for file in "${results[@]:-}"; do
         console.info "  📄 $file"
     done
 }

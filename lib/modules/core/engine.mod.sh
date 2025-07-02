@@ -18,7 +18,7 @@ import console
 ##
 function engine.modules() {
     # List all module names (from *.mod.sh files in lib/modules/)
-    find "${BASH__PATH}/lib/modules" -name "*.mod.sh" 2>/dev/null | while read -r modfile; do
+    find "${BASH__PATH:-}/lib/modules" -name "*.mod.sh" 2>/dev/null | while read -r modfile; do
         local module_name=$(basename "$modfile" .mod.sh)
         printf "%s\n" "$module_name"
     done
@@ -55,7 +55,7 @@ function engine.modules.byCategory() {
     console.info "============================="
 
     # Find all module directories
-    find ${BASH__PATH}/lib/modules -type d -mindepth 1 -maxdepth 1 2>/dev/null | sort | while read -r category_dir; do
+    find ${BASH__PATH:-}/lib/modules -type d -mindepth 1 -maxdepth 1 2>/dev/null | sort | while read -r category_dir; do
         local category_name=$(basename "$category_dir")
 
         # Skip if category filter is specified and doesn't match

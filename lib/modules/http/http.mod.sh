@@ -8,7 +8,7 @@ if command -v import.meta.loaded >/dev/null 2>&1; then
     import.meta.loaded "http" "${BASH__PATH:-/opt/bash-lib}/modules/http/http.mod.sh" "1.0.0" 2>/dev/null || true
 fi
 
-import console
+# Console module is already imported by init.sh, no need to import again
 
 # HTTP Module Configuration
 __HTTP__DEFAULT_TIMEOUT=30

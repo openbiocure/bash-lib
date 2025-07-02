@@ -198,8 +198,6 @@ make install-deps  # Install development dependencies
 make test          # Run unit tests
 make man           # Generate Manual.md from module help
 make install       # Install bash-lib locally
-make uninstall     # Uninstall bash-lib
-make clean         # Remove build artifacts
 ```
 
 ### Running Tests
@@ -305,7 +303,38 @@ env | grep BASH__
 ls modules/*/
 ```
 
-## 🤝 Contributing
+## 🐛 Known Issues & Fixes
+
+### Unbound Variable Error (Fixed)
+
+**Issue**: bash-lib previously failed with "unbound variable" errors when using strict error handling (`set -u` or `set -euo pipefail`).
+
+**Error Message**:
+```bash
+/opt/bash-lib/lib/init.sh: line 87: !signal: unbound variable
+```
+
+**Root Cause**: Unguarded variable expansions in module import system and array access patterns throughout the codebase.
+
+**Status**: ✅ **RESOLVED** - All unguarded variable expansions have been fixed with proper default values.
+
+**Fix Applied**:
+- Added default values for all array access: `${array[index]:-}`
+- Fixed indirect variable expansion: `${!signal:-}`
+- Updated all modules to be compatible with `set -u`
+- Enhanced CI to test with strict error handling
+
+**Related**: [GitHub Issue #18](https://github.com/openbiocure/bash-lib/issues/18)
+
+> **Note**: bash-lib now fully supports strict error handling. You can safely use `set -u` in your scripts.
+
+## 🤝 Contributing & Conduct
+
+All contributors must follow our [Code of Conduct](lib/docs/CODE_OF_CONDUCT.md).
+
+> **Shell Scripting Policy:**
+>
+> This project enforces strict shell scripting best practices, including the mandatory use of `set -u` (nounset) and proper guarding of all variable and array expansions. Please read the [Code of Conduct](lib/docs/CODE_OF_CONDUCT.md) for details.
 
 ### Getting Started
 
