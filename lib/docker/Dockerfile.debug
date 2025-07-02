@@ -1,34 +1,29 @@
-# Debug Dockerfile for bash-lib with local test script
+# Local testing Dockerfile for bash-lib development
+# This Dockerfile installs bash-lib from local files for development/testing
 
-FROM ubuntu:22.04
+# Stage 1: Base with files
+FROM ubuntu:22.04 as base
 
 ENV BASH__PATH=/opt/bash-lib
 ENV DEBIAN_FRONTEND=noninteractive
-ENV BASH_LIB_DEBUG=true
-ENV BASH_LIB_DOCKER=true
 
-# Install core packages
-RUN apt-get update && apt-get install -y curl unzip bash && rm -rf /var/lib/apt/lists/*
+# Install only minimal essential packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install bash-lib using the main install script (auto-detects Docker)
-RUN curl -sSL -o /tmp/install.sh https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh &&
-    bash /tmp/install.sh &&
-    rm /tmp/install.sh
+# Install bash-lib from local files (for testing)
+COPY . /tmp/bash-lib/
 
-# Add local test script
-COPY test-docker-init.sh /usr/local/bin/test-docker-init.sh
-RUN chmod +x /usr/local/bin/test-docker-init.sh
+# Stage 2: Installation
+FROM base as installed
 
-# Set up environment variables and auto-load bash-lib
-RUN echo "export BASH__PATH=/opt/bash-lib" >>/etc/bash.bashrc &&
-    echo "export BASH_LIB_DEBUG=true" >>/etc/bash.bashrc &&
-    echo "export BASH_LIB_DOCKER=true" >>/etc/bash.bashrc &&
-    echo "source /opt/bash-lib/lib/core/init.sh" >>/etc/bash.bashrc
+# Change to the bash-lib directory and run install script
+WORKDIR /tmp/bash-lib
+RUN bash scripts/install.sh
 
-# Run your init test
-RUN /usr/local/bin/test-docker-init.sh
-
-# Final verification
-RUN bash -c "source /opt/bash-lib/lib/core/init.sh && import console && console.info '✅ bash-lib installed and working inside Docker!'"
+# Test basic functionality
+RUN echo "=== Testing bash-lib ===" && \
+    bash -c "source /opt/bash-lib/lib/init.sh && import console && console.info '✅ bash-lib is working in Docker!'"
 
 CMD ["bash"]
