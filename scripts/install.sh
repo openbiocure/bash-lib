@@ -140,8 +140,8 @@ source_bash_lib() {
     if [ -f "$BASH_LIB_PATH/lib/init.sh" ]; then
         # Use a subshell to prevent sourcing errors from affecting the main script
         if (source "$BASH_LIB_PATH/lib/init.sh" 2>/dev/null); then
-            # Verify import function is available
-            if command -v import >/dev/null 2>&1; then
+            # Verify import function is available (use type to check for shell functions)
+            if type import >/dev/null 2>&1; then
                 echo "✅ bash-lib successfully loaded in current session"
             else
                 echo "⚠️  bash-lib loaded but 'import' function not found"
@@ -372,7 +372,7 @@ install() {
     $cmd_prefix mkdir -p $BASH_LIB_PATH
 
     # Check if we're installing locally (from current directory)
-    if [ -d "./core" ] && [ -d "./modules" ]; then
+    if [ -d "./lib/modules/core" ] && [ -d "./lib/modules" ]; then
         install_from_local
     else
         install_from_remote "$version"

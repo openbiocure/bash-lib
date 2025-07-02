@@ -192,20 +192,31 @@ main_init() {
 #---------------------------------------
 # Execute Initialization
 #---------------------------------------
-if [[ "${BASH_LIB_DOCKER}" == "true" && "$(command -v timeout)" ]]; then
-    timeout ${TIMEOUT_SECONDS}s main_init || {
-    printf "ERROR: Initialization timed out after %s seconds\n" "$TIMEOUT_SECONDS" >&2
-      exit 1
-    }
-  else
-  main_init
+# Initialize the result variable
+init_result=0
+
+if [[ "${BASH_LIB_DOCKER}" == "true" ]]; then
+    # Simplified Docker initialization without timeout
+    main_init
+    init_result=$?
+
+    if [[ $init_result -ne 0 ]]; then
+        printf "ERROR: Initialization failed with exit code %d\n" "$init_result" >&2
+        return $init_result
+    fi
+else
+    main_init
+    init_result=$?
 fi
 
 #---------------------------------------
 # Final Status
 #---------------------------------------
-if [[ $? -eq 0 ]]; then
+if [[ $init_result -eq 0 ]]; then
   __debug "bash-lib initialized successfully"
+  # Always return 0 for successful initialization when sourced
+  return 0
 else
   __debug "bash-lib initialization failed"
+  return $init_result
 fi

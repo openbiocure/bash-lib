@@ -17,31 +17,52 @@ __CONSOLE__DEFAULT_VERBOSITY="info"
 __CONSOLE__OUTPUT="" # Can be: stdout, stderr, /dev/null, or a file
 
 # Log level mapping (lowest to highest)
-declare -gA __CONSOLE__LEVELS
+# Use associative arrays if available (bash 4.0+), otherwise use regular arrays
+if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+    declare -gA __CONSOLE__LEVELS
+    __CONSOLE__LEVELS=(
+        [trace]=0
+        [debug]=1
+        [info]=2
+        [warn]=3
+        [error]=4
+        [fatal]=5
+        [success]=6
+        [log]=7
+    )
 
-__CONSOLE__LEVELS=(
-    [trace]=0
-    [debug]=1
-    [info]=2
-    [warn]=3
-    [error]=4
-    [fatal]=5
-    [success]=6
-    [log]=7
-)
+    # Color mapping for log types
+    declare -gA __CONSOLE__COLORS
+    __CONSOLE__COLORS=(
+        [trace]="$BYellow"
+        [debug]="$BCyan"
+        [info]="$Color_Off"
+        [warn]="$BYellow"
+        [error]="$BRed"
+        [fatal]="$BRed"
+        [success]="$BGreen"
+        [log]="$Color_Off"
+    )
+else
+    # Fallback for older bash versions - use regular arrays
+    __CONSOLE__LEVELS_trace=0
+    __CONSOLE__LEVELS_debug=1
+    __CONSOLE__LEVELS_info=2
+    __CONSOLE__LEVELS_warn=3
+    __CONSOLE__LEVELS_error=4
+    __CONSOLE__LEVELS_fatal=5
+    __CONSOLE__LEVELS_success=6
+    __CONSOLE__LEVELS_log=7
 
-# Color mapping for log types
-declare -gA __CONSOLE__COLORS
-__CONSOLE__COLORS=(
-    [trace]="$BYellow"
-    [debug]="$BCyan"
-    [info]="$Color_Off"
-    [warn]="$BYellow"
-    [error]="$BRed"
-    [fatal]="$BRed"
-    [success]="$BGreen"
-    [log]="$Color_Off"
-)
+    __CONSOLE__COLORS_trace="$BYellow"
+    __CONSOLE__COLORS_debug="$BCyan"
+    __CONSOLE__COLORS_info="$Color_Off"
+    __CONSOLE__COLORS_warn="$BYellow"
+    __CONSOLE__COLORS_error="$BRed"
+    __CONSOLE__COLORS_fatal="$BRed"
+    __CONSOLE__COLORS_success="$BGreen"
+    __CONSOLE__COLORS_log="$Color_Off"
+fi
 
 # Output stream selector
 __console__output_stream() {
@@ -74,8 +95,16 @@ __console__output_stream() {
 
 # Get numeric value for a log level
 __console__level_value() {
-    local level="${1,,}"
-    printf "%d" "${__CONSOLE__LEVELS[$level]:-2}"
+    local level
+    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+        level="${1,,}"
+        printf "%d" "${__CONSOLE__LEVELS[$level]:-2}"
+    else
+        # Fallback for older bash versions - convert to lowercase manually
+        level=$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')
+        local var_name="__CONSOLE__LEVELS_${level}"
+        printf "%d" "${!var_name:-2}"
+    fi
 }
 
 # Should log this level?
@@ -97,11 +126,25 @@ __console__should_log() {
 
 # Core logging function
 __console__log() {
-    local log_type="${1,,}"
+    local log_type
+    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+        log_type="${1,,}"
+    else
+        # Fallback for older bash versions - convert to lowercase manually
+        log_type=$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')
+    fi
     shift
     local message="$*"
-    local color="${__CONSOLE__COLORS[$log_type]:-$Color_Off}"
+    local color
     local color_off="$Color_Off"
+
+    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+        color="${__CONSOLE__COLORS[$log_type]:-$Color_Off}"
+    else
+        # Fallback for older bash versions
+        local color_var_name="__CONSOLE__COLORS_${log_type}"
+        color="${!color_var_name:-$Color_Off}"
+    fi
 
     # Skip color codes if BASH_LIB_TEST is set (original request)
     if [[ -n "$BASH_LIB_TEST" ]]; then
@@ -112,7 +155,14 @@ __console__log() {
     local log_date=$(date "$__CONSOLE__TIME__FORMAT")
     local host_name=$(hostname)
     local script_name=$(basename "$0" 2>/dev/null || printf "bash")
-    local template="${color}${log_date} - ${host_name} - ${script_name} - [${log_type^^}]:${color_off}"
+    local log_type_upper
+    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+        log_type_upper="${log_type^^}"
+    else
+        # Fallback for older bash versions - convert to uppercase manually
+        log_type_upper=$(printf "%s" "$log_type" | tr '[:lower:]' '[:upper:]')
+    fi
+    local template="${color}${log_date} - ${host_name} - ${script_name} - [${log_type_upper}]:${color_off}"
     local out_stream=$(__console__output_stream "$log_type")
 
     __console__should_log "$log_type" || return 0
@@ -161,30 +211,52 @@ console.empty() { printf ""; }
 
 # Verbosity control
 console.set_verbosity() {
-    local level="${1,,}"
-    # Workaround: re-declare the array if empty (for test/subshell issues)
-    if [[ -z "${__CONSOLE__LEVELS[debug]+isset}" ]]; then
-        declare -gA __CONSOLE__LEVELS=(
-            [trace]=0
-            [debug]=1
-            [info]=2
-            [warn]=3
-            [error]=4
-            [fatal]=5
-            [success]=6
-            [log]=7
-        )
+    local level
+    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+        level="${1,,}"
+    else
+        # Fallback for older bash versions - convert to lowercase manually
+        level=$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')
     fi
 
-    if [[ -n "${__CONSOLE__LEVELS[$level]}" ]]; then
-        export BASH__VERBOSE="$level"
-        # Only log if debug level is allowed
-        if __console__should_log "debug"; then
-            console.debug "Verbosity set to: $level"
+    if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+        # Workaround: re-declare the array if empty (for test/subshell issues)
+        if [[ -z "${__CONSOLE__LEVELS[debug]+isset}" ]]; then
+            declare -gA __CONSOLE__LEVELS=(
+                [trace]=0
+                [debug]=1
+                [info]=2
+                [warn]=3
+                [error]=4
+                [fatal]=5
+                [success]=6
+                [log]=7
+            )
+        fi
+
+        if [[ -n "${__CONSOLE__LEVELS[$level]}" ]]; then
+            export BASH__VERBOSE="$level"
+            # Only log if debug level is allowed
+            if __console__should_log "debug"; then
+                console.debug "Verbosity set to: $level"
+            fi
+        else
+            printf "Invalid verbosity level: %s\n" "$level" >&2
+            return 1
         fi
     else
-        printf "Invalid verbosity level: %s\n" "$level" >&2
-        return 1
+        # Fallback for older bash versions
+        local var_name="__CONSOLE__LEVELS_${level}"
+        if [[ -n "${!var_name}" ]]; then
+            export BASH__VERBOSE="$level"
+            # Only log if debug level is allowed
+            if __console__should_log "debug"; then
+                console.debug "Verbosity set to: $level"
+            fi
+        else
+            printf "Invalid verbosity level: %s\n" "$level" >&2
+            return 1
+        fi
     fi
 }
 console.get_verbosity() {
