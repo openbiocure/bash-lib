@@ -152,7 +152,7 @@ __console__log() {
     fi
 
     # Skip color codes if BASH_LIB_TEST is set (original request)
-    if [[ -n "$BASH_LIB_TEST" ]]; then
+    if [[ -n "${BASH_LIB_TEST:-}" ]]; then
         color=""
         color_off=""
     fi
