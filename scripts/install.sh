@@ -11,6 +11,57 @@ GITHUB_REPO="openbiocure/bash-lib"
 SHELL_PROFILE=""
 BASH_PROFILE=""
 
+# Parse command line arguments
+parse_arguments() {
+    local version=""
+    local branch=""
+    local commit=""
+    local path=""
+    local command="install"
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --version)
+                version="$2"
+                shift 2
+                ;;
+            --branch)
+                branch="$2"
+                shift 2
+                ;;
+            --commit)
+                commit="$2"
+                shift 2
+                ;;
+            --path)
+                path="$2"
+                shift 2
+                ;;
+            install|uninstall|help)
+                command="$1"
+                shift
+                ;;
+            -h|--help)
+                command="help"
+                shift
+                ;;
+            *)
+                # If it looks like a version, treat it as such
+                if [[ "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$1" =~ ^[0-9]{8}-[a-f0-9]+$ ]]; then
+                    version="$1"
+                else
+                    echo "Unknown option: $1"
+                    echo "Use '$0 help' for usage information."
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    echo "$command|$version|$branch|$commit|$path"
+}
+
 # Detect if we're running in a Docker container or as root
 is_docker_or_root() {
     # Check if we're running as root (UID 0)
@@ -198,6 +249,161 @@ install_from_local() {
     fi
 }
 
+# Install from specific path
+install_from_path() {
+    local source_path="$1"
+
+    if is_docker_or_root; then
+        echo "🐳 Installing bash-lib from path: $source_path in Docker container..."
+    else
+        echo "Installing bash-lib from path: $source_path..."
+    fi
+
+    # Validate the source path
+    if [ ! -d "$source_path" ]; then
+        echo "❌ Source path does not exist or is not a directory: $source_path"
+        return 1
+    fi
+
+    # Check if it looks like a bash-lib installation
+    if [ ! -d "$source_path/lib/modules/core" ] || [ ! -d "$source_path/lib/modules" ]; then
+        echo "❌ Source path does not appear to be a valid bash-lib installation"
+        echo "   Expected structure: $source_path/lib/modules/core"
+        return 1
+    fi
+
+    # Copy files to target directory
+    echo "📁 Installing to $BASH_LIB_PATH..."
+    local cmd_prefix=$(get_cmd_prefix)
+
+    if $cmd_prefix cp -r "$source_path"/* "$BASH_LIB_PATH/"; then
+        make_scripts_executable
+        add_to_shell_profile
+        source_bash_lib
+
+        echo ""
+        if is_docker_or_root; then
+            echo "✅ bash-lib installed successfully from path in Docker container!"
+            echo "📝 The 'import' function is now available in this session."
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        else
+            echo "✅ bash-lib installed successfully from path!"
+            echo "📝 The 'import' function is now available in this session."
+            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        fi
+    else
+        echo "❌ Failed to copy files from $source_path to $BASH_LIB_PATH"
+        return 1
+    fi
+}
+
+# Install from branch or commit
+install_from_branch_or_commit() {
+    local branch_or_commit="$1"
+    local type="$2"  # "branch" or "commit"
+
+    if is_docker_or_root; then
+        echo "🐳 Installing bash-lib from $type: $branch_or_commit in Docker container..."
+    else
+        echo "Installing bash-lib from $type: $branch_or_commit..."
+    fi
+
+    # Validate branch/commit name
+    if [ -z "$branch_or_commit" ]; then
+        echo "❌ $type name cannot be empty"
+        return 1
+    fi
+
+    # Check for potentially dangerous characters in branch/commit names
+    if [[ "$branch_or_commit" =~ [\;\&\|\`\$] ]]; then
+        echo "❌ Invalid $type name: contains potentially dangerous characters"
+        echo "   Please use a valid $type name without special characters"
+        return 1
+    fi
+
+    # Create temporary directory
+    TEMP_DIR=$(mktemp -d)
+    cd $TEMP_DIR
+
+    # Clone the repository
+    echo "📥 Cloning bash-lib repository..."
+    if ! git clone --depth 1 https://github.com/$GITHUB_REPO.git bash-lib-temp; then
+        echo "❌ Failed to clone bash-lib repository"
+        echo "   Please check your internet connection and try again"
+        cd - >/dev/null
+        rm -rf $TEMP_DIR
+        return 1
+    fi
+
+    # Checkout specific branch or commit
+    cd bash-lib-temp
+    echo "🔍 Checking out $type: $branch_or_commit..."
+    if ! git checkout "$branch_or_commit" 2>/dev/null; then
+        echo "❌ Failed to checkout $type: $branch_or_commit"
+        echo ""
+        echo "Possible reasons:"
+        echo "  - The $type does not exist in the repository"
+        echo "  - The $type name is misspelled"
+        echo "  - You don't have access to this $type"
+        echo ""
+        echo "Available branches:"
+        git branch -r | head -10 | sed 's/^/  - /' || echo "  (Could not list branches)"
+        echo ""
+        echo "💡 Try:"
+        echo "  - Check the $type name spelling"
+        echo "  - Use 'git ls-remote --heads origin' to see available branches"
+        echo "  - Install from a release instead: $0 --version v1.0.0"
+        cd - >/dev/null
+        rm -rf $TEMP_DIR
+        return 1
+    fi
+
+    # Verify it's a valid bash-lib installation
+    if [ ! -d "lib/modules/core" ] || [ ! -d "lib/modules" ]; then
+        echo "❌ The checked out $type does not appear to be a valid bash-lib installation"
+        echo "   Expected structure: lib/modules/core"
+        cd - >/dev/null
+        rm -rf $TEMP_DIR
+        return 1
+    fi
+
+    # Install from local directory
+    cd ..
+    local cmd_prefix=$(get_cmd_prefix)
+
+    if $cmd_prefix cp -r bash-lib-temp/* "$BASH_LIB_PATH/"; then
+        make_scripts_executable
+        add_to_shell_profile
+        source_bash_lib
+
+        echo ""
+        if is_docker_or_root; then
+            echo "✅ bash-lib installed successfully from $type in Docker container!"
+            echo "📝 The 'import' function is now available in this session."
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        else
+            echo "✅ bash-lib installed successfully from $type!"
+            echo "📝 The 'import' function is now available in this session."
+            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+            echo ""
+            echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
+        fi
+    else
+        echo "❌ Failed to copy files to $BASH_LIB_PATH"
+        cd - >/dev/null
+        rm -rf $TEMP_DIR
+        return 1
+    fi
+
+    # Cleanup
+    cd - >/dev/null
+    rm -rf $TEMP_DIR
+}
+
 # Install from remote repository
 install_from_remote() {
     local requested_version="$1"
@@ -363,19 +569,90 @@ install_from_remote() {
     rm -rf $TEMP_DIR
 }
 
+# Check if git is available
+check_git_availability() {
+    if ! command -v git >/dev/null 2>&1; then
+        echo "❌ git is not installed on this system"
+        echo ""
+        echo "To install git:"
+        echo "  Ubuntu/Debian: sudo apt-get install git"
+        echo "  CentOS/RHEL:   sudo yum install git"
+        echo "  macOS:         brew install git"
+        echo "  Windows:       Download from https://git-scm.com/"
+        echo ""
+        echo "Alternatively, you can:"
+        echo "  - Install from a release version: $0 --version v1.0.0"
+        echo "  - Install from a local path: $0 --path /path/to/bash-lib"
+        echo "  - Install from current directory (if it's a bash-lib repo)"
+        return 1
+    fi
+    return 0
+}
+
+# Check for required dependencies
+check_dependencies() {
+    local missing_deps=()
+
+    # Check for curl (needed for release downloads)
+    if ! command -v curl >/dev/null 2>&1; then
+        missing_deps+=("curl")
+    fi
+
+    # Check for tar (needed for extracting tarballs)
+    if ! command -v tar >/dev/null 2>&1; then
+        missing_deps+=("tar")
+    fi
+
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        echo "❌ Missing required dependencies: ${missing_deps[*]}"
+        echo ""
+        echo "To install missing dependencies:"
+        echo "  Ubuntu/Debian: sudo apt-get install ${missing_deps[*]}"
+        echo "  CentOS/RHEL:   sudo yum install ${missing_deps[*]}"
+        echo "  macOS:         brew install ${missing_deps[*]}"
+        return 1
+    fi
+
+    return 0
+}
+
 # Main installation function
 install() {
     local version="$1"
+    local branch="$2"
+    local commit="$3"
+    local path="$4"
     local cmd_prefix=$(get_cmd_prefix)
+
+    # Check dependencies for all installation methods
+    if ! check_dependencies; then
+        return 1
+    fi
 
     # Create the directory if it does not exist
     $cmd_prefix mkdir -p $BASH_LIB_PATH
 
-    # Check if we're installing locally (from current directory)
-    if [ -d "./lib/modules/core" ] && [ -d "./lib/modules" ]; then
+    # Priority order: path > branch > commit > version > local > latest
+    if [ -n "$path" ]; then
+        install_from_path "$path"
+    elif [ -n "$branch" ]; then
+        # Check git availability before attempting branch installation
+        if ! check_git_availability; then
+            return 1
+        fi
+        install_from_branch_or_commit "$branch" "branch"
+    elif [ -n "$commit" ]; then
+        # Check git availability before attempting commit installation
+        if ! check_git_availability; then
+            return 1
+        fi
+        install_from_branch_or_commit "$commit" "commit"
+    elif [ -n "$version" ]; then
+        install_from_remote "$version"
+    elif [ -d "./lib/modules/core" ] && [ -d "./lib/modules" ]; then
         install_from_local
     else
-        install_from_remote "$version"
+        install_from_remote
     fi
 }
 
@@ -403,33 +680,42 @@ uninstall() {
 
 # Show help
 show_help() {
-    echo "Usage: $0 [COMMAND] [VERSION]"
+    echo "Usage: $0 [COMMAND] [OPTIONS]"
     echo ""
     echo "Commands:"
     echo "  install    - Install bash-lib (default)"
     echo "  uninstall  - Uninstall bash-lib"
     echo "  help       - Show this help message"
     echo ""
-    echo "Arguments:"
-    echo "  VERSION    - Specific version to install (e.g., v1.0.0, 20241201-abc123)"
-    echo "               If not specified, installs the latest release"
+    echo "Options:"
+    echo "  --version <version>  - Install specific release version (e.g., v1.0.0)"
+    echo "  --branch <branch>    - Install from specific branch (e.g., fix/bug-123)"
+    echo "  --commit <commit>    - Install from specific commit (e.g., d08b7e5)"
+    echo "  --path <path>        - Install from local path"
     echo ""
     echo "Examples:"
-    echo "  $0                    # Install latest bash-lib"
-    echo "  $0 install            # Install latest bash-lib"
-    echo "  $0 install v1.0.0     # Install specific version"
-    echo "  $0 install 20241201-abc123  # Install specific build"
-    echo "  $0 uninstall          # Uninstall bash-lib"
-    echo "  $0 help               # Show help"
+    echo "  $0                                    # Install latest release"
+    echo "  $0 install --version v1.0.0          # Install specific version"
+    echo "  $0 install --branch fix/bug-123      # Install from branch"
+    echo "  $0 install --commit d08b7e5          # Install from commit"
+    echo "  $0 install --path /tmp/bash-lib      # Install from local path"
+    echo "  $0 uninstall                         # Uninstall bash-lib"
+    echo "  $0 help                              # Show help"
+    echo ""
+    echo "Note: When installing from branch or commit, git must be installed on your system."
 }
 
 # Main function with switch statement
 main() {
     init_shell_profile
 
-    case "${1:-install}" in
+    # Parse arguments
+    local parsed_args=$(parse_arguments "$@")
+    IFS='|' read -r command version branch commit path <<< "$parsed_args"
+
+    case "$command" in
     "install")
-        install "$2"
+        install "$version" "$branch" "$commit" "$path"
         ;;
     "uninstall")
         uninstall
@@ -438,14 +724,9 @@ main() {
         show_help
         ;;
     *)
-        # If first argument is not a command, treat it as version for install
-        if [[ "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$1" =~ ^[0-9]{8}-[a-f0-9]+$ ]]; then
-            install "$1"
-        else
-            echo "Unknown command: $1"
-            echo "Use '$0 help' for usage information."
-            exit 1
-        fi
+        echo "Unknown command: $command"
+        echo "Use '$0 help' for usage information."
+        exit 1
         ;;
     esac
 }
