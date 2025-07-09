@@ -25,6 +25,41 @@ curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/in
 curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s 20241201-abc123
 ```
 
+### Installation Options
+
+The install script supports multiple installation methods:
+
+#### From Releases (Recommended)
+```bash
+# Latest release
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash
+
+# Specific version
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s v1.0.0
+```
+
+#### From Git Branches
+```bash
+# Install from a feature branch
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s -- --branch feature/new-module
+
+# Install from a specific commit
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s -- --commit abc123def456
+
+# Install from main branch (latest development)
+curl -sSL https://raw.githubusercontent.com/openbiocure/bash-lib/main/scripts/install.sh | bash -s -- --branch main
+```
+
+> **Note**: Installing from branches or commits requires `git` to be installed on your system.
+
+#### From Local Directory
+```bash
+# Clone and install locally
+git clone https://github.com/openbiocure/bash-lib
+cd bash-lib
+./scripts/install.sh install --path .
+```
+
 ### Development Setup
 
 ```bash

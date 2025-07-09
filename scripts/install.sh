@@ -409,7 +409,7 @@ install_from_branch_or_commit() {
 
     # Clone the repository
     echo "📥 Cloning bash-lib repository..."
-    if ! git clone --depth 1 https://github.com/$GITHUB_REPO.git bash-lib-temp; then
+    if ! git clone https://github.com/$GITHUB_REPO.git bash-lib-temp; then
         echo "❌ Failed to clone bash-lib repository"
         echo "   Please check your internet connection and try again"
         cd - >/dev/null
@@ -420,24 +420,56 @@ install_from_branch_or_commit() {
     # Checkout specific branch or commit
     cd bash-lib-temp
     echo "🔍 Checking out $type: $branch_or_commit..."
-    if ! git checkout "$branch_or_commit" 2>/dev/null; then
-        echo "❌ Failed to checkout $type: $branch_or_commit"
-        echo ""
-        echo "Possible reasons:"
-        echo "  - The $type does not exist in the repository"
-        echo "  - The $type name is misspelled"
-        echo "  - You don't have access to this $type"
-        echo ""
-        echo "Available branches:"
-        git branch -r | head -10 | sed 's/^/  - /' || echo "  (Could not list branches)"
-        echo ""
-        echo "💡 Try:"
-        echo "  - Check the $type name spelling"
-        echo "  - Use 'git ls-remote --heads origin' to see available branches"
-        echo "  - Install from a release instead: $0 --version v1.0.0"
-        cd - >/dev/null
-        rm -rf $TEMP_DIR
-        return 1
+
+    if [ "$type" = "branch" ]; then
+        # For branches, try to checkout the branch
+        if ! git checkout "$branch_or_commit" 2>/dev/null; then
+            # If direct checkout fails, try to fetch and checkout
+            echo "📥 Fetching branch from remote..."
+            if ! git fetch origin "$branch_or_commit" 2>/dev/null; then
+                echo "❌ Failed to fetch branch: $branch_or_commit"
+                echo ""
+                echo "Possible reasons:"
+                echo "  - The branch does not exist in the repository"
+                echo "  - The branch name is misspelled"
+                echo "  - You don't have access to this branch"
+                echo ""
+                echo "Available branches:"
+                git ls-remote --heads origin | sed 's/.*refs\/heads\///' | head -10 | sed 's/^/  - /' || echo "  (Could not list branches)"
+                echo ""
+                echo "💡 Try:"
+                echo "  - Check the branch name spelling"
+                echo "  - Use 'git ls-remote --heads origin' to see available branches"
+                echo "  - Install from a release instead: $0 --version v1.0.0"
+                cd - >/dev/null
+                rm -rf $TEMP_DIR
+                return 1
+            fi
+            # Now try to checkout the fetched branch
+            if ! git checkout -b "$branch_or_commit" "origin/$branch_or_commit" 2>/dev/null; then
+                echo "❌ Failed to checkout branch: $branch_or_commit"
+                cd - >/dev/null
+                rm -rf $TEMP_DIR
+                return 1
+            fi
+        fi
+    else
+        # For commits, try to checkout the commit
+        if ! git checkout "$branch_or_commit" 2>/dev/null; then
+            echo "❌ Failed to checkout commit: $branch_or_commit"
+            echo ""
+            echo "Possible reasons:"
+            echo "  - The commit does not exist in the repository"
+            echo "  - The commit hash is misspelled"
+            echo "  - You don't have access to this commit"
+            echo ""
+            echo "💡 Try:"
+            echo "  - Check the commit hash spelling"
+            echo "  - Install from a release instead: $0 --version v1.0.0"
+            cd - >/dev/null
+            rm -rf $TEMP_DIR
+            return 1
+        fi
     fi
 
     # Verify it's a valid bash-lib installation
