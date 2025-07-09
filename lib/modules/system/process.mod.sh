@@ -165,7 +165,12 @@ function process.find() {
 
         for pid in $pids; do
             if process.exists "$pid"; then
-                if process.stop "$pid" --verbose "$verbose"; then
+                local stop_args=""
+                if [[ "$verbose" == true ]]; then
+                    stop_args="--verbose"
+                fi
+
+                if process.stop "$pid" $stop_args; then
                     ((killed_count++))
                     if [[ "$verbose" == true ]]; then
                         console.success "Killed process $pid"
@@ -709,6 +714,118 @@ function process.getUser() {
 }
 
 ##
+## (Usage) Find processes listening on a specific port
+##
+## Examples:
+##   process.listening_to 3000        # Find processes listening on port 3000
+##   process.listening_to 8080 --pid-only  # Show only PIDs
+##   process.listening_to 22 --verbose # Show detailed information
+##
+function process.listening_to() {
+    local port=""
+    local pid_only=false
+    local verbose=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        --pid-only)
+            pid_only=true
+            shift
+            ;;
+        --verbose)
+            verbose=true
+            shift
+            ;;
+        -*)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
+        *)
+            if [[ -z "$port" ]]; then
+                port="$1"
+            else
+                console.error "Multiple ports specified"
+                return 1
+            fi
+            shift
+            ;;
+        esac
+    done
+
+    # Validate port
+    if [[ -z "$port" ]]; then
+        console.error "Port number is required"
+        return 1
+    fi
+
+    if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+        console.error "Port must be a number"
+        return 1
+    fi
+
+    # Find processes listening on the port
+    local result=""
+    local pids=""
+
+    # Try different methods to find listeners
+    if command -v ss >/dev/null 2>&1; then
+        # Use ss (socket statistics) - most modern
+        result=$(ss -tulpn 2>/dev/null | grep ":$port ")
+        pids=$(echo "$result" | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | sort -u)
+    elif command -v netstat >/dev/null 2>&1; then
+        # Use netstat - fallback
+        result=$(netstat -tulpn 2>/dev/null | grep ":$port ")
+        pids=$(echo "$result" | awk '{print $7}' | sed 's/\/.*//' | sort -u)
+    elif command -v lsof >/dev/null 2>&1; then
+        # Use lsof - alternative
+        result=$(lsof -i -P -n 2>/dev/null | grep ":$port ")
+        pids=$(echo "$result" | awk '{print $2}' | sort -u)
+    else
+        console.error "No suitable command found (ss, netstat, or lsof required)"
+        return 1
+    fi
+
+    # Check if any processes found
+    if [[ -z "$pids" ]]; then
+        if [[ "$verbose" == true ]]; then
+            console.info "No processes found listening on port $port"
+        fi
+        return 0
+    fi
+
+    # Handle different output modes
+    if [[ "$pid_only" == true ]]; then
+        # Print only PIDs
+        echo "$pids"
+    else
+        # Show detailed information
+        if [[ "$verbose" == true ]]; then
+            console.info "Processes listening on port $port:"
+        fi
+
+        for pid in $pids; do
+            if process.exists "$pid"; then
+                local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                local process_user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
+
+                if [[ "$verbose" == true ]]; then
+                    console.info "  PID: $pid, Process: $process_name, User: $process_user"
+                else
+                    echo "PID: $pid, Process: $process_name, User: $process_user"
+                fi
+            else
+                if [[ "$verbose" == true ]]; then
+                    console.warn "  PID: $pid (process no longer exists)"
+                else
+                    echo "PID: $pid (process no longer exists)"
+                fi
+            fi
+        done
+    fi
+}
+
+##
 ## (Usage) Show process module help
 ##
 function process.help() {
@@ -719,6 +836,8 @@ Available Functions:
   process.list [options]           - List running processes
   process.count                    - Get total process count
   process.find <name> [options]    - Find processes by name
+  process.find_listeners [port] [options] - Find processes listening on ports
+  process.listening_to <port> [options] - Find processes listening on specific port
   process.top_cpu [limit]          - Top processes by CPU usage
   process.top_mem [limit]          - Top processes by memory usage
   process.run <command> [options]  - Run a command with various options
@@ -734,6 +853,16 @@ List Options:
 Find Options:
   --id                             - Print only process IDs
   --kill                           - Kill all matching processes
+  --verbose                        - Show detailed information
+
+Find Listeners Options:
+  --tcp                            - Show only TCP listeners
+  --udp                            - Show only UDP listeners
+  --format=<format>                - Output format (default|table)
+  --pid-only                       - Show only process IDs
+
+Listening To Options:
+  --pid-only                       - Show only process IDs
   --verbose                        - Show detailed information
 
 Run Options:
@@ -761,6 +890,12 @@ Examples:
   process.find npm --id            # Print only npm process IDs
   process.find node --kill         # Kill all node processes
   process.find python --verbose    # Find Python processes with details
+  process.find_listeners           # Find all listening processes
+  process.find_listeners 8080      # Find process listening on port 8080
+  process.find_listeners --tcp --format=table  # Find TCP listeners in table format
+  process.listening_to 3000        # Find processes listening on port 3000
+  process.listening_to 8080 --pid-only  # Show only PIDs for port 8080
+  process.listening_to 22 --verbose # Show detailed info for port 22
   process.top_cpu 5                # Top 5 CPU-intensive processes
   process.top_mem 10               # Top 10 memory-intensive processes
   process.run "apt-get update" --timeout=300
