@@ -157,6 +157,7 @@ init_shell_profile() {
 # Add bash-lib to shell profile
 add_to_shell_profile() {
     local cmd_prefix=$(get_cmd_prefix)
+    local profile_updated=false
 
     # In Docker environments, we might not want to modify shell profiles
     if [ "$BASH_LIB_DOCKER" = "true" ]; then
@@ -164,24 +165,62 @@ add_to_shell_profile() {
         return 0
     fi
 
+    echo "📝 Configuring shell profile: $SHELL_PROFILE"
+
     # Add export for BASH__PATH
     if ! grep -q "export BASH__PATH=$BASH_LIB_PATH" "$SHELL_PROFILE" 2>/dev/null; then
-        echo "export BASH__PATH=$BASH_LIB_PATH" >>"$SHELL_PROFILE" 2>/dev/null || echo "⚠️  Could not write to $SHELL_PROFILE"
+        if echo "export BASH__PATH=$BASH_LIB_PATH" >>"$SHELL_PROFILE" 2>/dev/null; then
+            echo "✅ Added BASH__PATH export to $SHELL_PROFILE"
+            profile_updated=true
+        else
+            echo "⚠️  Could not write to $SHELL_PROFILE (permission denied)"
+            echo "   You may need to manually add: export BASH__PATH=$BASH_LIB_PATH"
+        fi
+    else
+        echo "ℹ️  BASH__PATH already configured in $SHELL_PROFILE"
     fi
 
     # Add source for init.sh
     if ! grep -q "source $BASH_LIB_PATH/lib/init.sh" "$SHELL_PROFILE" 2>/dev/null; then
-        echo "source $BASH_LIB_PATH/lib/init.sh" >>"$SHELL_PROFILE" 2>/dev/null || echo "⚠️  Could not write to $SHELL_PROFILE"
+        if echo "source $BASH_LIB_PATH/lib/init.sh" >>"$SHELL_PROFILE" 2>/dev/null; then
+            echo "✅ Added bash-lib source to $SHELL_PROFILE"
+            profile_updated=true
+        else
+            echo "⚠️  Could not write to $SHELL_PROFILE (permission denied)"
+            echo "   You may need to manually add: source $BASH_LIB_PATH/lib/init.sh"
+        fi
+    else
+        echo "ℹ️  bash-lib source already configured in $SHELL_PROFILE"
     fi
 
     # Also add to .bash_profile if it exists and is different
     if [ -n "$BASH_PROFILE" ] && [ "$SHELL_PROFILE" != "$BASH_PROFILE" ] && [ -f "$BASH_PROFILE" ]; then
+        echo "📝 Also configuring: $BASH_PROFILE"
+
         if ! grep -q "export BASH__PATH=$BASH_LIB_PATH" "$BASH_PROFILE" 2>/dev/null; then
-            echo "export BASH__PATH=$BASH_LIB_PATH" >>"$BASH_PROFILE" 2>/dev/null || echo "⚠️  Could not write to $BASH_PROFILE"
+            if echo "export BASH__PATH=$BASH_LIB_PATH" >>"$BASH_PROFILE" 2>/dev/null; then
+                echo "✅ Added BASH__PATH export to $BASH_PROFILE"
+                profile_updated=true
+            else
+                echo "⚠️  Could not write to $BASH_PROFILE (permission denied)"
+            fi
         fi
+
         if ! grep -q "source $BASH_LIB_PATH/lib/init.sh" "$BASH_PROFILE" 2>/dev/null; then
-            echo "source $BASH_LIB_PATH/lib/init.sh" >>"$BASH_PROFILE" 2>/dev/null || echo "⚠️  Could not write to $BASH_PROFILE"
+            if echo "source $BASH_LIB_PATH/lib/init.sh" >>"$BASH_PROFILE" 2>/dev/null; then
+                echo "✅ Added bash-lib source to $BASH_PROFILE"
+                profile_updated=true
+            else
+                echo "⚠️  Could not write to $BASH_PROFILE (permission denied)"
+            fi
         fi
+    fi
+
+    # Return whether profile was updated
+    if [ "$profile_updated" = true ]; then
+        return 0
+    else
+        return 1
     fi
 }
 
@@ -193,9 +232,9 @@ source_bash_lib() {
         if (source "$BASH_LIB_PATH/lib/init.sh" 2>/dev/null); then
             # Verify import function is available (use type to check for shell functions)
             if type import >/dev/null 2>&1; then
-                echo "✅ bash-lib successfully loaded in current session"
-            else
-                echo "⚠️  bash-lib loaded but 'import' function not found"
+            echo "✅ bash-lib successfully loaded in current session"
+        else
+            echo "⚠️  bash-lib loaded but 'import' function not found"
             fi
         else
             echo "⚠️  Could not source bash-lib (init.sh had errors)"
@@ -218,7 +257,7 @@ install_from_local() {
     if is_docker_or_root; then
         echo "🐳 Installing bash-lib from local directory in Docker container..."
     else
-        echo "Installing bash-lib from local directory..."
+    echo "Installing bash-lib from local directory..."
     fi
 
     # Copy files to target directory
@@ -227,7 +266,10 @@ install_from_local() {
 
     if $cmd_prefix cp -r . "$BASH_LIB_PATH/"; then
         make_scripts_executable
-        add_to_shell_profile
+        local profile_updated=false
+        if add_to_shell_profile; then
+            profile_updated=true
+        fi
         source_bash_lib
 
         echo ""
@@ -239,7 +281,24 @@ install_from_local() {
         else
             echo "✅ bash-lib installed successfully from local directory!"
             echo "📝 The 'import' function is now available in this session."
-            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+
+            if [ "$profile_updated" = true ]; then
+                echo ""
+                echo "🔄 To activate bash-lib in new terminal sessions:"
+                echo "   • Restart your terminal, OR"
+                echo "   • Run: source $SHELL_PROFILE"
+                echo ""
+                echo "📋 Manual activation (if auto-configuration failed):"
+                echo "   export BASH__PATH=$BASH_LIB_PATH"
+                echo "   source $BASH_LIB_PATH/lib/init.sh"
+            else
+                echo ""
+                echo "⚠️  Shell profile configuration failed or was already configured."
+                echo "📋 To manually activate bash-lib in new sessions, add to $SHELL_PROFILE:"
+                echo "   export BASH__PATH=$BASH_LIB_PATH"
+                echo "   source $BASH_LIB_PATH/lib/init.sh"
+            fi
+
             echo ""
             echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
         fi
@@ -278,7 +337,10 @@ install_from_path() {
 
     if $cmd_prefix cp -r "$source_path"/* "$BASH_LIB_PATH/"; then
         make_scripts_executable
-        add_to_shell_profile
+        local profile_updated=false
+        if add_to_shell_profile; then
+            profile_updated=true
+        fi
         source_bash_lib
 
         echo ""
@@ -290,7 +352,24 @@ install_from_path() {
         else
             echo "✅ bash-lib installed successfully from path!"
             echo "📝 The 'import' function is now available in this session."
-            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+
+            if [ "$profile_updated" = true ]; then
+                echo ""
+                echo "🔄 To activate bash-lib in new terminal sessions:"
+                echo "   • Restart your terminal, OR"
+                echo "   • Run: source $SHELL_PROFILE"
+                echo ""
+                echo "📋 Manual activation (if auto-configuration failed):"
+                echo "   export BASH__PATH=$BASH_LIB_PATH"
+                echo "   source $BASH_LIB_PATH/lib/init.sh"
+            else
+                echo ""
+                echo "⚠️  Shell profile configuration failed or was already configured."
+                echo "📋 To manually activate bash-lib in new sessions, add to $SHELL_PROFILE:"
+                echo "   export BASH__PATH=$BASH_LIB_PATH"
+                echo "   source $BASH_LIB_PATH/lib/init.sh"
+            fi
+
             echo ""
             echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
         fi
@@ -376,7 +455,10 @@ install_from_branch_or_commit() {
 
     if $cmd_prefix cp -r bash-lib-temp/* "$BASH_LIB_PATH/"; then
         make_scripts_executable
-        add_to_shell_profile
+        local profile_updated=false
+        if add_to_shell_profile; then
+            profile_updated=true
+        fi
         source_bash_lib
 
         echo ""
@@ -388,7 +470,24 @@ install_from_branch_or_commit() {
         else
             echo "✅ bash-lib installed successfully from $type!"
             echo "📝 The 'import' function is now available in this session."
-            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+
+            if [ "$profile_updated" = true ]; then
+                echo ""
+                echo "🔄 To activate bash-lib in new terminal sessions:"
+                echo "   • Restart your terminal, OR"
+                echo "   • Run: source $SHELL_PROFILE"
+                echo ""
+                echo "📋 Manual activation (if auto-configuration failed):"
+                echo "   export BASH__PATH=$BASH_LIB_PATH"
+                echo "   source $BASH_LIB_PATH/lib/init.sh"
+            else
+                echo ""
+                echo "⚠️  Shell profile configuration failed or was already configured."
+                echo "📋 To manually activate bash-lib in new sessions, add to $SHELL_PROFILE:"
+                echo "   export BASH__PATH=$BASH_LIB_PATH"
+                echo "   source $BASH_LIB_PATH/lib/init.sh"
+            fi
+
             echo ""
             echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
         fi
@@ -469,7 +568,7 @@ install_from_remote() {
             cd - >/dev/null
             rm -rf $TEMP_DIR
             return 1
-        fi
+    fi
 
         # Check if it's a gzip file by looking at magic bytes
         if ! head -c 2 "$tarball_name" | grep -q $'\x1f\x8b'; then
@@ -513,9 +612,9 @@ install_from_remote() {
             echo "   On Ubuntu/Debian: sudo apt-get install tar"
             echo "   On CentOS/RHEL: sudo yum install tar"
             echo "   On macOS: tar should be pre-installed"
-            cd - >/dev/null
-            rm -rf $TEMP_DIR
-            return 1
+        cd - >/dev/null
+        rm -rf $TEMP_DIR
+        return 1
         fi
     fi
 
@@ -541,7 +640,10 @@ install_from_remote() {
 
     if $cmd_prefix cp -r "$extracted_dir"/* $BASH_LIB_PATH/; then
         make_scripts_executable
-        add_to_shell_profile
+        local profile_updated=false
+        if add_to_shell_profile; then
+            profile_updated=true
+        fi
         source_bash_lib
 
         echo ""
@@ -553,7 +655,24 @@ install_from_remote() {
         else
             echo "✅ bash-lib installed successfully from remote repository!"
             echo "📝 The 'import' function is now available in this session."
-            echo "🔄 For new terminal sessions, restart your terminal or run: source $SHELL_PROFILE"
+
+            if [ "$profile_updated" = true ]; then
+                echo ""
+                echo "🔄 To activate bash-lib in new terminal sessions:"
+                echo "   • Restart your terminal, OR"
+                echo "   • Run: source $SHELL_PROFILE"
+                echo ""
+                echo "📋 Manual activation (if auto-configuration failed):"
+                echo "   export BASH__PATH=$BASH_LIB_PATH"
+                echo "   source $BASH_LIB_PATH/lib/init.sh"
+            else
+                echo ""
+                echo "⚠️  Shell profile configuration failed or was already configured."
+                echo "📋 To manually activate bash-lib in new sessions, add to $SHELL_PROFILE:"
+                echo "   export BASH__PATH=$BASH_LIB_PATH"
+                echo "   source $BASH_LIB_PATH/lib/init.sh"
+            fi
+
             echo ""
             echo "💡 Try: import console && console.info 'Hello from bash-lib!'"
         fi

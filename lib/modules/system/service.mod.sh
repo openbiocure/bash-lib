@@ -6,14 +6,61 @@
 # shellcheck disable=SC2034
 SERVICE_MODULE_VERSION="1.0.0"
 
+# Import required modules
+import console
+import process
+import network
+import http
+
 # Default service configuration
 SERVICE_DEFAULT_TIMEOUT=30
 SERVICE_DEFAULT_RETRY_INTERVAL=2
 SERVICE_DEFAULT_HEALTH_CHECK_INTERVAL=5
 
-# Service status tracking
-declare -A SERVICE_PIDS
-declare -A SERVICE_STATUS
+# Service status tracking (bash 3.x compatible)
+SERVICE_PIDS=""
+SERVICE_STATUS=""
+
+# Helper functions for service tracking
+_service_get_pid() {
+    local service_name="$1"
+    echo "$SERVICE_PIDS" | grep "^$service_name:" | cut -d: -f2
+}
+
+_service_set_pid() {
+    local service_name="$1"
+    local pid="$2"
+    # Remove existing entry if any
+    SERVICE_PIDS=$(echo "$SERVICE_PIDS" | grep -v "^$service_name:")
+    # Add new entry
+    SERVICE_PIDS="$SERVICE_PIDS
+$service_name:$pid"
+}
+
+_service_get_status() {
+    local service_name="$1"
+    echo "$SERVICE_STATUS" | grep "^$service_name:" | cut -d: -f2
+}
+
+_service_set_status() {
+    local service_name="$1"
+    local status="$2"
+    # Remove existing entry if any
+    SERVICE_STATUS=$(echo "$SERVICE_STATUS" | grep -v "^$service_name:")
+    # Add new entry
+    SERVICE_STATUS="$SERVICE_STATUS
+$service_name:$status"
+}
+
+_service_remove() {
+    local service_name="$1"
+    SERVICE_PIDS=$(echo "$SERVICE_PIDS" | grep -v "^$service_name:")
+    SERVICE_STATUS=$(echo "$SERVICE_STATUS" | grep -v "^$service_name:")
+}
+
+_service_list() {
+    echo "$SERVICE_PIDS" | grep -v "^$" | cut -d: -f1
+}
 
 # Start a service with health check
 # Usage: service.start <service_name> <command> [options]
@@ -98,7 +145,8 @@ service.start() {
 
     # Check if service is already running
     if service.is_running "$service_name"; then
-        console.warn "Service '$service_name' is already running (PID: ${SERVICE_PIDS[$service_name]:-})"
+        local existing_pid=$(_service_get_pid "$service_name")
+        console.warn "Service '$service_name' is already running (PID: $existing_pid)"
         return 0
     fi
 
@@ -114,8 +162,8 @@ service.start() {
     local pid=$!
 
     # Store service information
-    SERVICE_PIDS["$service_name"]=$pid
-    SERVICE_STATUS["$service_name"]="starting"
+    _service_set_pid "$service_name" "$pid"
+    _service_set_status "$service_name" "starting"
 
     console.info "Service '$service_name' started with PID: $pid"
 
@@ -126,7 +174,7 @@ service.start() {
         return 1
     fi
 
-    SERVICE_STATUS["$service_name"]="running"
+    _service_set_status "$service_name" "running"
     console.success "Service '$service_name' is ready and running"
     return 0
 }
@@ -179,12 +227,11 @@ service.wait_for_ready() {
     done
 
     # Validate service exists
-    if [[ -z "${SERVICE_PIDS[$service_name]:-}" ]]; then
+    local pid=$(_service_get_pid "$service_name")
+    if [[ -z "$pid" ]]; then
         console.error "Service '$service_name' not found"
         return 1
     fi
-
-    local pid="${SERVICE_PIDS[$service_name]:-}"
     local start_time=$(date +%s)
     local elapsed=0
 
@@ -290,12 +337,11 @@ service.health() {
     done
 
     # Check if service exists
-    if [[ -z "${SERVICE_PIDS[$service_name]:-}" ]]; then
+    local pid=$(_service_get_pid "$service_name")
+    if [[ -z "$pid" ]]; then
         console.error "Service '$service_name' not found"
         return 1
     fi
-
-    local pid="${SERVICE_PIDS[$service_name]:-}"
 
     # Check if process is running
     if ! process.exists "$pid"; then
@@ -357,7 +403,7 @@ service.is_running() {
         return 1
     fi
 
-    local pid="${SERVICE_PIDS[$service_name]:-}"
+    local pid=$(_service_get_pid "$service_name")
 
     if [[ -z "$pid" ]]; then
         return 1
@@ -367,8 +413,7 @@ service.is_running() {
         return 0
     else
         # Clean up stale entry
-        unset SERVICE_PIDS["$service_name"]
-        unset SERVICE_STATUS["$service_name"]
+        _service_remove "$service_name"
         return 1
     fi
 }
@@ -410,7 +455,7 @@ service.stop() {
         return 1
     fi
 
-    local pid="${SERVICE_PIDS[$service_name]:-}"
+    local pid=$(_service_get_pid "$service_name")
 
     if [[ -z "$pid" ]]; then
         console.warn "Service '$service_name' not found"
@@ -419,8 +464,7 @@ service.stop() {
 
     if ! process.exists "$pid"; then
         console.warn "Service '$service_name' process (PID: $pid) is not running"
-        unset SERVICE_PIDS["$service_name"]
-        unset SERVICE_STATUS["$service_name"]
+        _service_remove "$service_name"
         return 0
     fi
 
@@ -443,8 +487,7 @@ service.stop() {
     fi
 
     # Clean up service tracking
-    unset SERVICE_PIDS["$service_name"]
-    unset SERVICE_STATUS["$service_name"]
+    _service_remove "$service_name"
 
     return 0
 }
@@ -468,15 +511,16 @@ service.list() {
         esac
     done
 
-    if [[ ${#SERVICE_PIDS[@]:-0} -eq 0 ]]; then
+    local service_list=$(_service_list)
+    if [[ -z "$service_list" ]]; then
         console.info "No services are currently tracked"
         return 0
     fi
 
     console.info "Services:"
-    for service_name in "${!SERVICE_PIDS[@]:-}"; do
-        local pid="${SERVICE_PIDS[$service_name]:-}"
-        local status="${SERVICE_STATUS[$service_name]:-}"
+    echo "$service_list" | while read -r service_name; do
+        local pid=$(_service_get_pid "$service_name")
+        local status=$(_service_get_status "$service_name")
 
         if process.exists "$pid"; then
             if [[ "$verbose" == true ]]; then
@@ -502,7 +546,7 @@ service.info() {
         return 1
     fi
 
-    local pid="${SERVICE_PIDS[$service_name]:-}"
+    local pid=$(_service_get_pid "$service_name")
 
     if [[ -z "$pid" ]]; then
         console.error "Service '$service_name' not found"
@@ -511,7 +555,7 @@ service.info() {
 
     console.info "Service: $service_name"
     console.info "  PID: $pid"
-    console.info "  Status: ${SERVICE_STATUS[$service_name]:-}"
+    console.info "  Status: $(_service_get_status "$service_name")"
 
     if process.exists "$pid"; then
         local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")

@@ -85,20 +85,118 @@ function process.count() {
 ##
 ## (Usage) Find processes by name
 ##
+## Options:
+##   --id                    - Print only process IDs
+##   --kill                  - Kill all matching processes
+##   --verbose               - Show detailed information
+##
 ## Examples:
 ##   process.find ssh               # Find all SSH-related processes
 ##   process.find nginx             # Find nginx processes
 ##   process.find python            # Find Python processes
 ##   process.find "docker"          # Find Docker processes
+##   process.find npm --id          # Print only npm process IDs
+##   process.find npm --kill        # Kill all npm processes
+##   process.find node --id --kill  # Print IDs and kill node processes
 ##
 function process.find() {
-    local process_name="$1"
+    local process_name=""
+    local show_ids=false
+    local kill_processes=false
+    local verbose=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        --id)
+            show_ids=true
+            shift
+            ;;
+        --kill)
+            kill_processes=true
+            shift
+            ;;
+        --verbose)
+            verbose=true
+            shift
+            ;;
+        -*)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
+        *)
+            if [[ -z "$process_name" ]]; then
+                process_name="$1"
+            else
+                console.error "Multiple process names specified"
+                return 1
+            fi
+            shift
+            ;;
+        esac
+    done
+
     if [[ -z "$process_name" ]]; then
         console.error "Process name is required"
         return 1
     fi
 
-    ps aux | grep -i "$process_name" | grep -v grep
+    # Find matching processes
+    local processes=$(ps aux | grep -i "$process_name" | grep -v grep)
+
+    if [[ -z "$processes" ]]; then
+        if [[ "$verbose" == true ]]; then
+            console.info "No processes found matching '$process_name'"
+        fi
+        return 0
+    fi
+
+    # Extract PIDs
+    local pids=$(echo "$processes" | awk '{print $2}')
+
+    # Handle different output modes
+    if [[ "$show_ids" == true ]]; then
+        # Print only PIDs
+        echo "$pids"
+    elif [[ "$kill_processes" == true ]]; then
+        # Kill processes and show results
+        local killed_count=0
+        local failed_count=0
+
+        for pid in $pids; do
+            if process.exists "$pid"; then
+                if process.stop "$pid" --verbose "$verbose"; then
+                    ((killed_count++))
+                    if [[ "$verbose" == true ]]; then
+                        console.success "Killed process $pid"
+                    fi
+                else
+                    ((failed_count++))
+                    if [[ "$verbose" == true ]]; then
+                        console.error "Failed to kill process $pid"
+                    fi
+                fi
+            else
+                if [[ "$verbose" == true ]]; then
+                    console.warn "Process $pid no longer exists"
+                fi
+            fi
+        done
+
+        if [[ $killed_count -gt 0 ]]; then
+            console.success "Successfully killed $killed_count process(es)"
+        fi
+
+        if [[ $failed_count -gt 0 ]]; then
+            console.error "Failed to kill $failed_count process(es)"
+            return 1
+        fi
+
+        return 0
+    else
+        # Default: show full process information
+        echo "$processes"
+    fi
 }
 
 ##
@@ -620,7 +718,7 @@ Process Module - Process management and monitoring utilities
 Available Functions:
   process.list [options]           - List running processes
   process.count                    - Get total process count
-  process.find <name>              - Find processes by name
+  process.find <name> [options]    - Find processes by name
   process.top_cpu [limit]          - Top processes by CPU usage
   process.top_mem [limit]          - Top processes by memory usage
   process.run <command> [options]  - Run a command with various options
@@ -632,6 +730,11 @@ List Options:
   -l=<number>, --limit=<number>    - Limit number of processes shown
   --no-log                         - Fast output without logging overhead
   --format=<format>                - Output format (compact|table|default)
+
+Find Options:
+  --id                             - Print only process IDs
+  --kill                           - Kill all matching processes
+  --verbose                        - Show detailed information
 
 Run Options:
   --timeout=<seconds>     - Set timeout in seconds (default: no timeout)
@@ -655,6 +758,9 @@ Examples:
   process.list --no-log --format=compact  # Fast compact output
   process.count                    # Get total process count
   process.find ssh                 # Find SSH processes
+  process.find npm --id            # Print only npm process IDs
+  process.find node --kill         # Kill all node processes
+  process.find python --verbose    # Find Python processes with details
   process.top_cpu 5                # Top 5 CPU-intensive processes
   process.top_mem 10               # Top 10 memory-intensive processes
   process.run "apt-get update" --timeout=300
