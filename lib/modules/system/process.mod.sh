@@ -826,6 +826,129 @@ function process.listening_to() {
 }
 
 ##
+## (Usage) Find processes listening on ports
+##
+## Options:
+##   --tcp                    - Show only TCP listeners
+##   --udp                    - Show only UDP listeners
+##   --format=<format>        - Output format (default|table)
+##   --pid-only               - Show only process IDs
+##
+## Examples:
+##   process.find_listeners           # Find all listening processes
+##   process.find_listeners 8080      # Find process listening on port 8080
+##   process.find_listeners --tcp --format=table  # Find TCP listeners in table format
+##
+function process.find_listeners() {
+    local port=""
+    local tcp_only=false
+    local udp_only=false
+    local format="default"
+    local pid_only=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        --tcp)
+            tcp_only=true
+            shift
+            ;;
+        --udp)
+            udp_only=true
+            shift
+            ;;
+        --format=*)
+            format="${1#*=}"
+            shift
+            ;;
+        --pid-only)
+            pid_only=true
+            shift
+            ;;
+        -* )
+            console.error "Unknown option: $1"
+            return 1
+            ;;
+        * )
+            if [[ -z "$port" ]]; then
+                port="$1"
+            else
+                console.error "Multiple ports specified"
+                return 1
+            fi
+            shift
+            ;;
+        esac
+    done
+
+    # Validate port if specified
+    if [[ -n "$port" ]] && ! [[ "$port" =~ ^[0-9]+$ ]]; then
+        console.error "Port must be a number"
+        return 1
+    fi
+
+    local result=""
+    local cmd=""
+    if command -v lsof >/dev/null 2>&1; then
+        # macOS: use lsof for port lookup
+        if [[ -n "$port" ]]; then
+            cmd="lsof -i :$port -P -n"
+        else
+            cmd="lsof -i -P -n"
+        fi
+        result=$($cmd 2>/dev/null | grep LISTEN || true)
+    elif command -v ss >/dev/null 2>&1; then
+        local protocol_filter="tu"
+        if [[ "$tcp_only" == true ]]; then protocol_filter="t"; fi
+        if [[ "$udp_only" == true ]]; then protocol_filter="u"; fi
+        cmd="ss -${protocol_filter}lpn"
+        if [[ -n "$port" ]]; then
+            result=$($cmd 2>/dev/null | grep ":$port" || true)
+        else
+            result=$($cmd 2>/dev/null || true)
+        fi
+    elif command -v netstat >/dev/null 2>&1; then
+        local protocol_filter="tu"
+        if [[ "$tcp_only" == true ]]; then protocol_filter="t"; fi
+        if [[ "$udp_only" == true ]]; then protocol_filter="u"; fi
+        cmd="netstat -${protocol_filter}lpn"
+        if [[ -n "$port" ]]; then
+            result=$($cmd 2>/dev/null | grep ":$port" || true)
+        else
+            result=$($cmd 2>/dev/null || true)
+        fi
+    else
+        console.error "No suitable command found (lsof, ss, netstat required)"
+        return 1
+    fi
+
+    if [[ -z "$result" ]]; then
+        if [[ -n "$port" ]]; then
+            console.info "No processes found listening on port $port"
+        else
+            console.info "No listening processes found"
+        fi
+        return 0
+    fi
+
+    if [[ "$pid_only" == true ]]; then
+        # For lsof, PID is the second column
+        echo "$result" | awk 'NR>1 {print $2}' | sort -u
+        return 0
+    fi
+
+    if [[ "$format" == "table" ]]; then
+        # For lsof, print a nice table
+        printf "%-10s %-8s %-16s %-8s %-6s %-20s %-20s\n" "COMMAND" "PID" "USER" "FD" "TYPE" "NAME" "PORT_INFO"
+        echo "$result" | awk 'NR>1 {printf "%-10s %-8s %-16s %-8s %-6s %-20s %-20s\n", $1, $2, $3, $4, $5, $9, $10}'
+        return 0
+    fi
+
+    # Default: print raw result
+    echo "$result"
+}
+
+##
 ## (Usage) Show process module help
 ##
 function process.help() {
