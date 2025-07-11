@@ -81,7 +81,7 @@ Library should initialize without errors in all bash environments.
 - `lib/init.sh`
 
 **Commit:**  
-[To be added after commit]
+`ca410e7` - fix: resolve bash compatibility issue with indirect parameter expansion
 
 **Testing:**  
 - ✅ Library loads successfully from project directory
