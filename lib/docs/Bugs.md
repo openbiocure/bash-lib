@@ -41,6 +41,56 @@ The function was documented in `process.help()` but never implemented in the `pr
 
 ---
 
+### BUG-002: Bash compatibility issue with indirect parameter expansion
+**Date:** 2025-11-07  
+**Status:** ✅ FIXED  
+**Priority:** High  
+
+**Description:**  
+The `validate_environment` function in `init.sh` uses `${!var}` syntax (indirect parameter expansion) which causes "bad substitution" errors in some bash environments and older bash versions.
+
+**Error Message:**  
+```bash
+validate_environment:6: bad substitution
+```
+
+**Steps to Reproduce:**  
+1. Source the library from a different location: `source ~/develop/bash-lib/lib/init.sh`
+2. Error occurs during environment validation
+
+**Expected Behavior:**  
+Library should initialize without errors in all bash environments.
+
+**Actual Behavior:**  
+"bad substitution" error prevents library initialization.
+
+**Environment:**  
+- OS: macOS
+- Bash Version: 5.2.37(1)-release
+- bash-lib Version: Current
+
+**Root Cause:**  
+`${!var}` syntax (indirect parameter expansion) is not supported in all bash versions or shell environments.
+
+**Fix Applied:**  
+- Replaced `${!var}` syntax with `eval "[[ -z \"\${$var}\" ]]"` for better compatibility
+- Updated all instances in `lib/init.sh` including `validate_environment`, `import.meta.loaded`, `import.meta.info`, and `import` functions
+- Maintained exact same functionality while improving bash version compatibility
+
+**Files Modified:**  
+- `lib/init.sh`
+
+**Commit:**  
+[To be added after commit]
+
+**Testing:**  
+- ✅ Library loads successfully from project directory
+- ✅ Library loads successfully from different location (`/tmp`)
+- ✅ No "bad substitution" errors
+- ✅ All import functionality works correctly
+
+---
+
 ## Bug Categories
 
 ### High Priority
@@ -113,6 +163,6 @@ The function was documented in `process.help()` but never implemented in the `pr
 
 ## Fix Statistics
 
-- **Total Bugs Fixed:** 1
+- **Total Bugs Fixed:** 2
 - **Open Bugs:** 0
 - **Last Updated:** 2025-11-07 

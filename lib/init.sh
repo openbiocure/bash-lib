@@ -35,7 +35,8 @@ validate_environment() {
 
   for var in PATH; do
     [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: validate_environment() checking var: %s\n" "$var"
-    [[ -z "${!var}" ]] && {
+    # Use eval for compatibility with older bash versions
+    eval "[[ -z \"\${$var}\" ]]" && {
       printf "ERROR: Required environment variable %s is not set\n" "$var" >&2
       return 1
     }
@@ -53,7 +54,7 @@ import.meta.loaded() {
   local name="$1" path="$2" version="${3:-unknown}"
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
 
-  [[ -z "${!signal:-}" ]] && __debug "Loaded module: $name [$version] from $path"
+  eval "[[ -z \"\${$signal:-}\" ]]" && __debug "Loaded module: $name [$version] from $path"
 }
 
 import.meta.all() {
@@ -72,7 +73,7 @@ import.meta.info() {
   }
 
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
-  [[ -n "${!signal:-}" ]] && printf "Module '%s' is loaded\n" "$name" || printf "Module '%s' is not loaded\n" "$name"
+  eval "[[ -n \"\${$signal:-}\" ]]" && printf "Module '%s' is loaded\n" "$name" || printf "Module '%s' is not loaded\n" "$name"
 }
 
 #---------------------------------------
@@ -89,7 +90,7 @@ import() {
   local src="${BASH__PATH:-/opt/bash-lib}"
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
   [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() checking signal: %s\n" "$signal"
-  [[ -n "${!signal:-}" ]] && {
+  eval "[[ -n \"\${$signal:-}\" ]]" && {
     [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() module %s already imported, returning\n" "$name"
     return 0
   }
@@ -117,7 +118,7 @@ import() {
     __debug "Importing $name from $mod_path"
     source "$mod_path"
     [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() sourced %s\n" "$mod_path"
-    [[ -n "${!signal:-}" || "$(type -t "${name}.help")" == "function" ]] && {
+    eval "[[ -n \"\${$signal:-}\" || \"\$(type -t \"${name}.help\")\" == \"function\" ]]" && {
       [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() module %s loaded successfully\n" "$name"
       return 0
     }
