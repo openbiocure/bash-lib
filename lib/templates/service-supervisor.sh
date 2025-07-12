@@ -18,10 +18,11 @@
 # This script needs to work before sourcing bash-lib, hence printf is required.
 
 # Ensure we can find bash-lib
-# Set BASH__PATH to /opt/bash-lib if not already set
-export BASH__PATH="${BASH__PATH:-/opt/bash-lib}"
+# BASH__PATH is passed from the template processing
+export BASH__PATH="{{BASH__PATH}}"
 if [[ ! -f "$BASH__PATH/init.sh" ]]; then
     printf '%s: ERROR: Cannot find bash-lib at %s\n' "$(date)" "$BASH__PATH" >> "{{LOG_FILE}}"
+    printf '%s: ERROR: Please ensure BASH__PATH is set correctly in the calling environment\n' "$(date)" >> "{{LOG_FILE}}"
     exit 1
 fi
 

@@ -377,7 +377,8 @@ _service_start_with_respawn() {
                 "RESTART_DELAY=$restart_delay" \
                 "COMMAND=$command" \
                 "LOG_FILE=$log_file" \
-                "PID_FILE=$pid_file"; then
+                "PID_FILE=$pid_file" \
+                "BASH__PATH=${BASH__PATH:-/opt/bash-lib}"; then
                 console.error "Failed to create supervisor script from template"
                 return 1
             fi

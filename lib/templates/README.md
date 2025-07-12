@@ -15,6 +15,7 @@ Template for generating service supervisor scripts that handle automatic respawn
 - `{{COMMAND}}` - The command to execute for the service
 - `{{LOG_FILE}}` - Path to the log file
 - `{{PID_FILE}}` - Path to the PID file
+- `{{BASH__PATH}}` - Path to bash-lib installation (passed from calling environment)
 
 **Usage:**
 This template is automatically used by the `service.start` function when `--respawn` and `--background` options are specified.
