@@ -215,6 +215,16 @@ service.start() {
             log_file="/var/log/${service_name}.log"
             console.warn "No log file specified, using default: $log_file"
         fi
+        
+        # Ensure log directory exists
+        local log_dir=$(dirname "$log_file")
+        if [[ ! -d "$log_dir" ]]; then
+            console.info "Creating log directory: $log_dir"
+            mkdir -p "$log_dir" || {
+                console.error "Failed to create log directory: $log_dir"
+                return 1
+            }
+        fi
     fi
 
     # Validate required parameters
@@ -324,7 +334,7 @@ _service_start_with_respawn() {
 # Generated at: \$(date)
 
 # Ensure we can find bash-lib
-export BASH__PATH="${BASH__PATH:-/opt/bash-lib}"
+export BASH__PATH="${BASH__PATH}"
 if [[ ! -f "\$BASH__PATH/init.sh" ]]; then
     echo "\$(date): ERROR: Cannot find bash-lib at \$BASH__PATH" >> "$log_file"
     exit 1
