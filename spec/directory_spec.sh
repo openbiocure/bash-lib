@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 
 Describe 'directory'
-setup() {
+Before 'setup_test_environment'
+setup_test_environment() {
     # Set BASH__PATH to the project root
     export BASH__PATH="$(pwd)"
     source "${BASH__PATH:-}/spec/init-spec.sh"
     import directory
     import string
 }
-Before setup
+
+
 
 It "directory.list function works"
     When call directory.list /tmp
