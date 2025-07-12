@@ -72,6 +72,47 @@ _service_check_nohup() {
     return 0
 }
 
+# Process template file with variable substitution
+# Usage: _service_process_template <template_file> <output_file> <var1=value1> [var2=value2] ...
+_service_process_template() {
+    local template_file="$1"
+    local output_file="$2"
+    shift 2
+    
+    # Check if template file exists
+    if [[ ! -f "$template_file" ]]; then
+        console.error "Template file not found: $template_file"
+        return 1
+    fi
+    
+    # Read template content
+    local content
+    content=$(cat "$template_file") || {
+        console.error "Failed to read template file: $template_file"
+        return 1
+    }
+    
+    # Replace variables
+    local var_name var_value
+    for var_spec in "$@"; do
+        if [[ "$var_spec" =~ ^([^=]+)=(.*)$ ]]; then
+            var_name="${BASH_REMATCH[1]}"
+            var_value="${BASH_REMATCH[2]}"
+            # Escape special characters in var_value for sed
+            var_value=$(printf '%s\n' "$var_value" | sed 's:[][\/.^$*]:\\&:g')
+            content=$(printf '%s\n' "$content" | sed "s/{{${var_name}}}/$var_value/g")
+        fi
+    done
+    
+    # Write processed content to output file
+    printf '%s\n' "$content" > "$output_file" || {
+        console.error "Failed to write output file: $output_file"
+        return 1
+    }
+    
+    return 0
+}
+
 # Check service module requirements
 service.check_requirements() {
     console.info "Checking service module requirements..."
@@ -326,65 +367,20 @@ _service_start_with_respawn() {
         else
             console.info "Starting service '$service_name' with background respawn (nohup)"
             
-            # Create supervisor script with proper error handling
+            # Create supervisor script using template
             local supervisor_script="/tmp/${service_name}_supervisor_$$.sh"
-            cat > "$supervisor_script" << EOF
-#!/bin/bash
-# Auto-generated supervisor script for $service_name
-# Generated at: \$(date)
-
-# Ensure we can find bash-lib
-export BASH__PATH="${BASH__PATH}"
-if [[ ! -f "\$BASH__PATH/init.sh" ]]; then
-    echo "\$(date): ERROR: Cannot find bash-lib at \$BASH__PATH" >> "$log_file"
-    exit 1
-fi
-
-source "\$BASH__PATH/init.sh"
-import service
-
-# Supervisor loop
-restart_count=0
-max_restarts=$max_restarts
-restart_delay=$restart_delay
-service_name="$service_name"
-command="$command"
-
-echo "\$(date): Supervisor started for service '\$service_name'" >> "$log_file"
-
-while true; do
-    # Check restart limits
-    if [[ \$max_restarts -gt 0 && \$restart_count -ge \$max_restarts ]]; then
-        echo "\$(date): Service '\$service_name' exceeded maximum restart attempts (\$max_restarts)" >> "$log_file"
-        exit 1
-    fi
-
-    # Start the service
-    echo "\$(date): Starting service '\$service_name' (attempt \$((restart_count + 1)))" >> "$log_file"
-    
-    # Use nohup to run the command
-    nohup \$command >> "$log_file" 2>&1 &
-    pid=\$!
-    
-    # Write PID to file
-    echo "\$pid" > "$pid_file"
-    
-    echo "\$(date): Service '\$service_name' started with PID: \$pid" >> "$log_file"
-    
-    # Wait for process to die
-    while kill -0 \$pid 2>/dev/null; do
-        sleep 5
-    done
-    
-    # Process died
-    echo "\$(date): Service '\$service_name' (PID: \$pid) has stopped" >> "$log_file"
-    
-    # Increment restart count and wait before restarting
-    restart_count=\$((restart_count + 1))
-    echo "\$(date): Restarting service '\$service_name' in \${restart_delay} seconds... (restart #\$restart_count)" >> "$log_file"
-    sleep "\$restart_delay"
-done
-EOF
+            local template_file="${BASH__PATH:-/opt/bash-lib}/lib/templates/service-supervisor.sh"
+            
+            if ! _service_process_template "$template_file" "$supervisor_script" \
+                "SERVICE_NAME=$service_name" \
+                "MAX_RESTARTS=$max_restarts" \
+                "RESTART_DELAY=$restart_delay" \
+                "COMMAND=$command" \
+                "LOG_FILE=$log_file" \
+                "PID_FILE=$pid_file"; then
+                console.error "Failed to create supervisor script from template"
+                return 1
+            fi
 
             # Make executable and run with nohup
             chmod +x "$supervisor_script"
