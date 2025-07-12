@@ -3,14 +3,14 @@
 export BASH__VERBOSE=error
 
 Describe 'HTTP Module'
-Before 'setup_test_environment'
-setup_test_environment() {
+setup() {
     # Set BASH__PATH to the project root
     export BASH__PATH="$(pwd)"
     source "${BASH__PATH:-}/spec/init-spec.sh"
     import http
     import string
 }
+Before setup
 
   Describe 'http.get'
     It 'should perform GET request successfully'
