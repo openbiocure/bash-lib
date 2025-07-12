@@ -1,4 +1,8 @@
-SHELL:=/bin/bash
+ifeq ($(shell test -x /opt/homebrew/bin/bash && echo yes),yes)
+  SHELL := /opt/homebrew/bin/bash
+else
+  SHELL := /bin/bash
+endif
 
 # Default target
 .DEFAULT_GOAL := help

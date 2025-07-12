@@ -62,6 +62,46 @@ _service_list() {
     echo "$SERVICE_PIDS" | grep -v "^$" | cut -d: -f1
 }
 
+# Check if nohup is available
+_service_check_nohup() {
+    if ! command -v nohup >/dev/null 2>&1; then
+        console.error "nohup is not available on this system"
+        console.info "Please install nohup or use foreground mode (remove --background flag)"
+        return 1
+    fi
+    return 0
+}
+
+# Check service module requirements
+service.check_requirements() {
+    console.info "Checking service module requirements..."
+    
+    local missing_tools=()
+    
+    # Check for nohup
+    if ! command -v nohup >/dev/null 2>&1; then
+        missing_tools+=("nohup")
+    fi
+    
+    # Check for other required tools
+    if ! command -v kill >/dev/null 2>&1; then
+        missing_tools+=("kill")
+    fi
+    
+    if ! command -v sleep >/dev/null 2>&1; then
+        missing_tools+=("sleep")
+    fi
+    
+    if [[ ${#missing_tools[@]} -eq 0 ]]; then
+        console.success "All required tools are available"
+        return 0
+    else
+        console.error "Missing required tools: ${missing_tools[*]}"
+        console.info "Background mode will not be available"
+        return 1
+    fi
+}
+
 # Start a service with health check
 # Usage: service.start <service_name> <command> [options]
 # Options:
@@ -72,6 +112,12 @@ _service_list() {
 #   --url <url>            URL to check for service readiness
 #   --dry-run              Show what would be done without executing
 #   --verbose              Enable verbose output
+#   --respawn              Enable automatic respawn when process dies
+#   --max-restarts <num>   Maximum restart attempts (0 = infinite, default: 0)
+#   --restart-delay <sec>  Seconds to wait between restarts (default: 5)
+#   --background           Run in background with nohup (survives logout)
+#   --log-file <path>      Log file for background mode
+#   --pid-file <path>      PID file for background mode
 service.start() {
     local service_name="$1"
     local command="$2"
@@ -84,6 +130,12 @@ service.start() {
     local url=""
     local dry_run=false
     local verbose=false
+    local respawn=false
+    local max_restarts=0
+    local restart_delay=5
+    local background=false
+    local log_file=""
+    local pid_file=""
 
     # Parse options
     while [[ $# -gt 0 ]]; do
@@ -116,12 +168,54 @@ service.start() {
             verbose=true
             shift
             ;;
+        --respawn)
+            respawn=true
+            shift
+            ;;
+        --max-restarts)
+            max_restarts="$2"
+            shift 2
+            ;;
+        --restart-delay)
+            restart_delay="$2"
+            shift 2
+            ;;
+        --background)
+            background=true
+            shift
+            ;;
+        --log-file)
+            log_file="$2"
+            shift 2
+            ;;
+        --pid-file)
+            pid_file="$2"
+            shift 2
+            ;;
         *)
             console.error "Unknown option: $1"
             return 1
             ;;
         esac
     done
+
+    # Check nohup availability if background mode requested
+    if [[ "$background" == true ]]; then
+        if ! _service_check_nohup; then
+            return 1
+        fi
+        
+        # Set default pid file if not specified
+        if [[ -z "$pid_file" ]]; then
+            pid_file="/var/run/${service_name}.pid"
+        fi
+        
+        # Ensure log file is specified for background mode
+        if [[ -z "$log_file" ]]; then
+            log_file="/var/log/${service_name}.log"
+            console.warn "No log file specified, using default: $log_file"
+        fi
+    fi
 
     # Validate required parameters
     if [[ -z "$service_name" || -z "$command" ]]; then
@@ -131,14 +225,13 @@ service.start() {
 
     if [[ "$dry_run" == true ]]; then
         console.info "DRY RUN: Would start service '$service_name' with command: $command"
-        if [[ -n "$health_check" ]]; then
-            console.info "DRY RUN: Health check: $health_check"
+        if [[ "$respawn" == true ]]; then
+            console.info "DRY RUN: Respawn enabled (max: $max_restarts, delay: ${restart_delay}s)"
         fi
-        if [[ -n "$port" ]]; then
-            console.info "DRY RUN: Port check: $port"
-        fi
-        if [[ -n "$url" ]]; then
-            console.info "DRY RUN: URL check: $url"
+        if [[ "$background" == true ]]; then
+            console.info "DRY RUN: Background mode enabled (nohup)"
+            console.info "DRY RUN: Log file: $log_file"
+            console.info "DRY RUN: PID file: $pid_file"
         fi
         return 0
     fi
@@ -149,6 +242,25 @@ service.start() {
         console.warn "Service '$service_name' is already running (PID: $existing_pid)"
         return 0
     fi
+
+    # Start service with appropriate mode
+    if [[ "$respawn" == true ]]; then
+        _service_start_with_respawn "$service_name" "$command" "$timeout" "$retry_interval" "$health_check" "$port" "$url" "$verbose" "$max_restarts" "$restart_delay" "$background" "$log_file" "$pid_file"
+    else
+        _service_start_once "$service_name" "$command" "$timeout" "$retry_interval" "$health_check" "$port" "$url" "$verbose"
+    fi
+}
+
+# Internal function for one-shot service start (current behavior)
+_service_start_once() {
+    local service_name="$1"
+    local command="$2"
+    local timeout="$3"
+    local retry_interval="$4"
+    local health_check="$5"
+    local port="$6"
+    local url="$7"
+    local verbose="$8"
 
     console.info "Starting service '$service_name'..."
 
@@ -177,6 +289,189 @@ service.start() {
     _service_set_status "$service_name" "running"
     console.success "Service '$service_name' is ready and running"
     return 0
+}
+
+# Internal function for respawn-enabled service start
+_service_start_with_respawn() {
+    local service_name="$1"
+    local command="$2"
+    local timeout="$3"
+    local retry_interval="$4"
+    local health_check="$5"
+    local port="$6"
+    local url="$7"
+    local verbose="$8"
+    local max_restarts="$9"
+    local restart_delay="${10}"
+    local background="${11}"
+    local log_file="${12}"
+    local pid_file="${13}"
+
+    if [[ "$background" == true ]]; then
+        # Double-check nohup availability
+        if ! _service_check_nohup; then
+            console.error "Cannot start background service: nohup not available"
+            console.info "Falling back to foreground mode"
+            background=false
+        else
+            console.info "Starting service '$service_name' with background respawn (nohup)"
+            
+            # Create supervisor script with proper error handling
+            local supervisor_script="/tmp/${service_name}_supervisor_$$.sh"
+            cat > "$supervisor_script" << EOF
+#!/bin/bash
+# Auto-generated supervisor script for $service_name
+# Generated at: \$(date)
+
+# Ensure we can find bash-lib
+export BASH__PATH="${BASH__PATH:-/opt/bash-lib}"
+if [[ ! -f "\$BASH__PATH/init.sh" ]]; then
+    echo "\$(date): ERROR: Cannot find bash-lib at \$BASH__PATH" >> "$log_file"
+    exit 1
+fi
+
+source "\$BASH__PATH/init.sh"
+import service
+
+# Supervisor loop
+restart_count=0
+max_restarts=$max_restarts
+restart_delay=$restart_delay
+service_name="$service_name"
+command="$command"
+
+echo "\$(date): Supervisor started for service '\$service_name'" >> "$log_file"
+
+while true; do
+    # Check restart limits
+    if [[ \$max_restarts -gt 0 && \$restart_count -ge \$max_restarts ]]; then
+        echo "\$(date): Service '\$service_name' exceeded maximum restart attempts (\$max_restarts)" >> "$log_file"
+        exit 1
+    fi
+
+    # Start the service
+    echo "\$(date): Starting service '\$service_name' (attempt \$((restart_count + 1)))" >> "$log_file"
+    
+    # Use nohup to run the command
+    nohup \$command >> "$log_file" 2>&1 &
+    pid=\$!
+    
+    # Write PID to file
+    echo "\$pid" > "$pid_file"
+    
+    echo "\$(date): Service '\$service_name' started with PID: \$pid" >> "$log_file"
+    
+    # Wait for process to die
+    while kill -0 \$pid 2>/dev/null; do
+        sleep 5
+    done
+    
+    # Process died
+    echo "\$(date): Service '\$service_name' (PID: \$pid) has stopped" >> "$log_file"
+    
+    # Increment restart count and wait before restarting
+    restart_count=\$((restart_count + 1))
+    echo "\$(date): Restarting service '\$service_name' in \${restart_delay} seconds... (restart #\$restart_count)" >> "$log_file"
+    sleep "\$restart_delay"
+done
+EOF
+
+            # Make executable and run with nohup
+            chmod +x "$supervisor_script"
+            
+            # Start supervisor in background
+            nohup bash "$supervisor_script" > "$log_file" 2>&1 &
+            local supervisor_pid=$!
+            
+            # Wait a moment to ensure it started
+            sleep 2
+            
+            # Verify supervisor is running
+            if kill -0 "$supervisor_pid" 2>/dev/null; then
+                console.success "Service '$service_name' supervisor started in background (PID: $supervisor_pid)"
+                console.info "Logs: $log_file"
+                console.info "PID file: $pid_file"
+                console.info "Supervisor script: $supervisor_script"
+            else
+                console.error "Failed to start supervisor for service '$service_name'"
+                console.error "Check logs: $log_file"
+                rm -f "$supervisor_script"
+                return 1
+            fi
+            
+            # Clean up temporary script after a delay
+            (sleep 30 && rm -f "$supervisor_script") &
+            
+        fi
+    fi
+    
+    # Fallback to foreground mode if background failed or not requested
+    if [[ "$background" != true ]]; then
+        console.info "Starting service '$service_name' with foreground respawn"
+        
+        local restart_count=0
+        local supervisor_pid=$$
+
+        # Set up signal handling for graceful shutdown
+        trap '_service_supervisor_cleanup "$service_name" "$supervisor_pid"' EXIT INT TERM
+
+        while true; do
+            # Check restart limits
+            if [[ $max_restarts -gt 0 && $restart_count -ge $max_restarts ]]; then
+                console.error "Service '$service_name' exceeded maximum restart attempts ($max_restarts)"
+                return 1
+            fi
+
+            # Start the service
+            console.info "Starting service '$service_name' (attempt $((restart_count + 1)))"
+            
+            eval "$command" &
+            local pid=$!
+
+            # Store service information
+            _service_set_pid "$service_name" "$pid"
+            _service_set_status "$service_name" "starting"
+
+            console.info "Service '$service_name' started with PID: $pid"
+
+            # Wait for service to be ready
+            if service.wait_for_ready "$service_name" --timeout "$timeout" --retry-interval "$retry_interval" --health-check "$health_check" --port "$port" --url "$url" --verbose "$verbose"; then
+                _service_set_status "$service_name" "running"
+                console.success "Service '$service_name' is ready and running"
+                
+                # Monitor the process
+                while process.exists "$pid"; do
+                    sleep 5
+                done
+                
+                # Process died
+                console.warn "Service '$service_name' (PID: $pid) has stopped"
+                _service_set_status "$service_name" "stopped"
+                
+                # Increment restart count and wait before restarting
+                restart_count=$((restart_count + 1))
+                console.info "Restarting service '$service_name' in ${restart_delay} seconds... (restart #$restart_count)"
+                sleep "$restart_delay"
+                
+            else
+                console.error "Service '$service_name' failed to become ready within timeout"
+                service.stop "$service_name" --force
+                restart_count=$((restart_count + 1))
+                console.info "Restarting service '$service_name' in ${restart_delay} seconds... (restart #$restart_count)"
+                sleep "$restart_delay"
+            fi
+        done
+    fi
+}
+
+# Cleanup function for supervisor
+_service_supervisor_cleanup() {
+    local service_name="$1"
+    local supervisor_pid="$2"
+    
+    console.info "Supervisor shutting down for service '$service_name'"
+    service.stop "$service_name" --force
+    exit 0
 }
 
 # Wait for a service to be ready
@@ -586,6 +881,12 @@ Functions:
       --url <url>            URL to check for service readiness
       --dry-run              Show what would be done without executing
       --verbose              Enable verbose output
+      --respawn              Enable automatic respawn when process dies
+      --max-restarts <num>   Maximum restart attempts (0 = infinite, default: 0)
+      --restart-delay <sec>  Seconds to wait between restarts (default: 5)
+      --background           Run in background with nohup (survives logout)
+      --log-file <path>      Log file for background mode
+      --pid-file <path>      PID file for background mode
 
   service.wait_for_ready <service_name> [options]
     Wait for a service to become ready
@@ -623,6 +924,9 @@ Functions:
   service.info <service_name>
     Show detailed information about a service
 
+  service.check_requirements
+    Check if required tools (nohup, kill, sleep) are available
+
   service.help
     Show this help message
 
@@ -632,6 +936,12 @@ Examples:
 
   # Start with custom health check
   service.start api_server "node server.js" --health-check "curl -f http://localhost:3000/health" --timeout 30
+
+  # Start with respawn (foreground)
+  service.start api_server "npm run backend" --respawn --max-restarts 5 --restart-delay 10
+
+  # Start with respawn and background (survives logout)
+  service.start api_server "npm run backend" --respawn --background --log-file /var/log/api.log
 
   # Wait for service to be ready
   service.wait_for_ready web_server --port 8080
@@ -644,6 +954,9 @@ Examples:
 
   # List all services
   service.list --verbose
+
+  # Check requirements
+  service.check_requirements
 EOF
 }
 
