@@ -1,8 +1,10 @@
+# Detect the best available bash version
 ifeq ($(shell test -x /opt/homebrew/bin/bash && echo yes),yes)
-  SHELL := /opt/homebrew/bin/bash
+  BASH_PATH := /opt/homebrew/bin/bash
 else
-  SHELL := /bin/bash
+  BASH_PATH := /bin/bash
 endif
+SHELL := $(BASH_PATH)
 
 # Default target
 .DEFAULT_GOAL := help
@@ -27,7 +29,7 @@ ensure-shellspec: install-deps
 
 # run unit tests (alias for all)
 test: install-deps
-	@export PATH="$$HOME/.local/bin:$$PATH" && export BASH__PATH="$$(pwd)" && shellspec --shell /opt/homebrew/bin/bash -e BASH__VERBOSE=info
+	@export PATH="$$HOME/.local/bin:$$PATH" && export BASH__PATH="$$(pwd)" && shellspec --shell $(BASH_PATH) -e BASH__VERBOSE=info
 
 # install bash-lib locally
 install: install-deps
