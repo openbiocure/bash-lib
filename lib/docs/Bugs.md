@@ -246,4 +246,42 @@ service.kill_respawn --all
 ```
 
 ### Related Commits
-- `505c67e` - feat: add service discovery from PID files for post-logout scenarios 
+- `505c67e` - feat: add service discovery from PID files for post-logout scenarios
+
+---
+
+## Directory Remove Function Missing Recursive Flag
+
+### Issue Description
+The `directory.remove` function fails to remove directories because it doesn't automatically add the recursive flag when the target is a directory.
+
+### Symptoms
+- Error: `Failed to remove: directory_name/`
+- Directory removal fails even when target is clearly a directory
+- Manual `rm -rf` works but `directory.remove` doesn't
+- Function requires explicit `--recursive` flag for directories
+
+### Environment
+- **Affected:** All systems using `directory.remove` on directories
+- **Root Cause:** Function doesn't automatically detect directories and add `-r` flag
+- **Impact:** Directory removal operations fail unexpectedly
+
+### Root Cause
+The function checks if the target is a directory but doesn't automatically add the recursive flag:
+
+```bash
+# ❌ Old logic - only adds -r if --recursive flag is used
+if [[ "$recursive" == "true" ]]; then rm_cmd="rm -r"; fi
+
+# ✅ Fixed logic - adds -r for directories automatically
+if [[ "$recursive" == "true" || $was_dir -eq 1 ]]; then rm_cmd="rm -r"; fi
+```
+
+### Solution Implemented
+Modified the `directory.remove` function to automatically add the recursive flag when the target is a directory, while still respecting the explicit `--recursive` flag.
+
+### Files Modified
+- `lib/modules/directory/directory.mod.sh` - Fixed recursive flag logic
+
+### Related Commits
+- `[commit_hash]` - fix: directory.remove auto-adds recursive flag for directories 

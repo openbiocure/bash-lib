@@ -244,7 +244,7 @@ function directory.remove() {
     local was_dir=0
     if [[ -d "$target" ]]; then was_dir=1; fi
     local rm_cmd="rm"
-    if [[ "$recursive" == "true" ]]; then rm_cmd="rm -r"; fi
+    if [[ "$recursive" == "true" || $was_dir -eq 1 ]]; then rm_cmd="rm -r"; fi
     if [[ "$force" == "true" ]]; then rm_cmd="$rm_cmd -f"; fi
     if [[ $was_dir -eq 1 && "$force" != "true" ]]; then
         console.warn "Removing directory: $target"
