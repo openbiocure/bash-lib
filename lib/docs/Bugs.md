@@ -125,4 +125,71 @@ SHELL := $(BASH_PATH)
 - `Makefile`
 
 ### Related Commits
-- `b6fc9e2` - fix: Makefile bash detection for cross-platform compatibility 
+- `b6fc9e2` - fix: Makefile bash detection for cross-platform compatibility
+
+---
+
+## Service Supervisor Template Path Issue
+
+### Issue Description
+The service supervisor script template was looking for bash-lib at the wrong path, causing "Cannot find bash-lib" errors when starting background services.
+
+### Symptoms
+- Background services fail to start with `--respawn --background`
+- Error: `Cannot find bash-lib at /opt/bash-lib`
+- Supervisor script exits immediately with exit code 1
+- Service appears to start but then fails verification
+
+### Environment
+- **Affected:** All systems with bash-lib installed at `/opt/bash-lib/`
+- **Root Cause:** Template was checking `$BASH__PATH/init.sh` instead of `$BASH__PATH/lib/init.sh`
+- **Impact:** Background service management completely broken
+
+### Root Cause
+The supervisor template was using incorrect path structure:
+
+```bash
+# ❌ Wrong path (template was using this)
+if [[ ! -f "$BASH__PATH/init.sh" ]]; then
+
+# ✅ Correct path (actual bash-lib structure)
+if [[ ! -f "$BASH__PATH/lib/init.sh" ]]; then
+```
+
+### Solution Implemented
+1. **Moved supervisor script to templates folder** for better organization
+2. **Fixed path in template** to use `$BASH__PATH/lib/init.sh`
+3. **Added template processing** with variable substitution
+4. **Passed BASH__PATH during template processing** instead of during execution
+5. **Added comprehensive documentation** explaining the approach
+
+### Files Modified
+- `lib/modules/system/service.mod.sh` - Added template processing function
+- `lib/templates/service-supervisor.sh` - Created template with correct paths
+- `lib/templates/README.md` - Added template documentation
+
+### Template Processing
+The supervisor script is now generated using a template system:
+
+```bash
+# Template processing happens in main process (has access to environment)
+_service_process_template "$template_file" "$supervisor_script" \
+    "SERVICE_NAME=$service_name" \
+    "BASH__PATH=${BASH__PATH:-/opt/bash-lib}" \
+    # ... other variables
+
+# Generated script runs in background with embedded values
+nohup bash "$supervisor_script" > "$log_file" 2>&1 &
+```
+
+### Why printf instead of console
+The template uses `printf` instead of `console` functions because:
+1. Runs before bash-lib is loaded (console functions don't exist yet)
+2. Needs to write directly to log files for persistence
+3. Runs in detached background process
+4. `printf` is always available (built into bash)
+
+### Related Commits
+- `4a0a928` - refactor: move supervisor script to templates folder and add documentation
+- `bb9f17b` - fix: pass BASH__PATH during template processing to fix background service startup
+- `871ae25` - fix: correct path to init.sh in supervisor template 

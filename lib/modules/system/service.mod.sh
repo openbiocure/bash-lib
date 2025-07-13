@@ -798,12 +798,17 @@ service.stop() {
 # Usage: service.list [options]
 service.list() {
     local verbose=false
+    local discover=false
 
     # Parse options
     while [[ $# -gt 0 ]]; do
         case $1 in
         --verbose)
             verbose=true
+            shift
+            ;;
+        --discover)
+            discover=true
             shift
             ;;
         *)
@@ -814,28 +819,64 @@ service.list() {
     done
 
     local service_list=$(_service_list)
-    if [[ -z "$service_list" ]]; then
-        console.info "No services are currently tracked"
-        return 0
+    local found_services=false
+
+    # Show tracked services
+    if [[ -n "$service_list" ]]; then
+        console.info "Tracked Services:"
+        found_services=true
+        echo "$service_list" | while read -r service_name; do
+            local pid=$(_service_get_pid "$service_name")
+            local status=$(_service_get_status "$service_name")
+
+            if process.exists "$pid"; then
+                if [[ "$verbose" == true ]]; then
+                    local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                    local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                    console.info "  $service_name: PID=$pid, Status=$status, Process=$process_name, User=$user"
+                else
+                    console.info "  $service_name: PID=$pid, Status=$status"
+                fi
+            else
+                console.warn "  $service_name: PID=$pid (process not found - stale entry)"
+            fi
+        done
     fi
 
-    console.info "Services:"
-    echo "$service_list" | while read -r service_name; do
-        local pid=$(_service_get_pid "$service_name")
-        local status=$(_service_get_status "$service_name")
-
-        if process.exists "$pid"; then
-            if [[ "$verbose" == true ]]; then
-                local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
-                local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
-                console.info "  $service_name: PID=$pid, Status=$status, Process=$process_name, User=$user"
-            else
-                console.info "  $service_name: PID=$pid, Status=$status"
-            fi
+    # Discover services from PID files if requested
+    if [[ "$discover" == true ]]; then
+        console.info "Discovering Services from PID Files:"
+        local pid_files=$(find /var/run -name "*.pid" 2>/dev/null)
+        
+        if [[ -n "$pid_files" ]]; then
+            found_services=true
+            for pid_file in $pid_files; do
+                local service_name=$(basename "$pid_file" .pid)
+                local pid=$(cat "$pid_file" 2>/dev/null)
+                
+                if [[ -n "$pid" && process.exists "$pid" ]]; then
+                    if [[ "$verbose" == true ]]; then
+                        local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                        local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                        console.info "  $service_name: PID=$pid, PID_File=$pid_file, Process=$process_name, User=$user"
+                    else
+                        console.info "  $service_name: PID=$pid, PID_File=$pid_file"
+                    fi
+                else
+                    console.warn "  $service_name: PID_File=$pid_file (process not found - stale PID file)"
+                fi
+            done
         else
-            console.warn "  $service_name: PID=$pid (process not found - stale entry)"
+            console.info "  No PID files found in /var/run/"
         fi
-    done
+    fi
+
+    if [[ "$found_services" != true ]]; then
+        console.info "No services found"
+        if [[ "$discover" != true ]]; then
+            console.info "Use 'service.list --discover' to find services from PID files"
+        fi
+    fi
 }
 
 # Get service information
@@ -927,6 +968,7 @@ Functions:
     List all tracked services
     Options:
       --verbose              Show detailed information
+      --discover             Discover services from PID files (useful after logout)
 
   service.info <service_name>
     Show detailed information about a service
