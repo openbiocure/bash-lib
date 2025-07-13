@@ -165,15 +165,19 @@ function process.find() {
 
         for pid in $pids; do
             if process.exists "$pid"; then
-                if process.stop "$pid" --verbose "$verbose"; then
-                    ((killed_count++))
-                    if [[ "$verbose" == true ]]; then
+                if [[ "$verbose" == true ]]; then
+                    if process.stop "$pid" --verbose; then
+                        ((killed_count++))
                         console.success "Killed process $pid"
+                    else
+                        ((failed_count++))
+                        console.error "Failed to kill process $pid"
                     fi
                 else
-                    ((failed_count++))
-                    if [[ "$verbose" == true ]]; then
-                        console.error "Failed to kill process $pid"
+                    if process.stop "$pid"; then
+                        ((killed_count++))
+                    else
+                        ((failed_count++))
                     fi
                 fi
             else
