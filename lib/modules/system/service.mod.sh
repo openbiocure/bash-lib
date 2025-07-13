@@ -1079,7 +1079,7 @@ service.kill_respawn() {
         if [[ "$force" == true ]]; then
             process.abort "$pid" --verbose "$verbose"
         else
-            process.stop "$pid" --timeout 10 --verbose "$verbose"
+            process.stop "$pid" --timeout=10 --verbose "$verbose"
         fi
     fi
 
