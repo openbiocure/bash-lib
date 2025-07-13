@@ -913,6 +913,187 @@ service.info() {
     fi
 }
 
+# Kill auto-respawning service completely
+# Usage: service.kill_respawn <service_name> [options]
+#        service.kill_respawn --all [options]
+service.kill_respawn() {
+    local service_name="$1"
+    shift
+
+    local force=false
+    local verbose=false
+    local kill_all=false
+
+    # Parse options
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        --force)
+            force=true
+            shift
+            ;;
+        --verbose)
+            verbose=true
+            shift
+            ;;
+        --all)
+            kill_all=true
+            shift
+            ;;
+        *)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
+        esac
+    done
+
+    if [[ "$kill_all" == true ]]; then
+        console.info "Killing all auto-respawning services..."
+        
+        # Find all supervisor processes
+        local supervisor_pids=$(ps aux | grep -E "(supervisor|nohup)" | grep -v grep | awk '{print $2}')
+        
+        if [[ -n "$supervisor_pids" ]]; then
+            console.info "Found supervisor processes: $supervisor_pids"
+            
+            for pid in $supervisor_pids; do
+                if [[ "$verbose" == true ]]; then
+                    console.info "Killing supervisor PID: $pid"
+                fi
+                
+                if [[ "$force" == true ]]; then
+                    kill -9 "$pid" 2>/dev/null
+                else
+                    kill "$pid" 2>/dev/null
+                fi
+            done
+            
+            # Wait a moment for processes to die
+            sleep 2
+            
+            # Kill any remaining supervisor processes
+            local remaining=$(ps aux | grep -E "(supervisor|nohup)" | grep -v grep | awk '{print $2}')
+            if [[ -n "$remaining" ]]; then
+                console.warn "Some supervisor processes still running, force killing: $remaining"
+                echo "$remaining" | xargs kill -9 2>/dev/null
+            fi
+        else
+            console.info "No supervisor processes found"
+        fi
+        
+        # Clean up PID files
+        local pid_files=$(find /var/run -name "*.pid" 2>/dev/null)
+        if [[ -n "$pid_files" ]]; then
+            console.info "Cleaning up PID files..."
+            for pid_file in $pid_files; do
+                local pid=$(cat "$pid_file" 2>/dev/null)
+                if [[ -n "$pid" ]]; then
+                    # Check if process is still running
+                    if ! kill -0 "$pid" 2>/dev/null; then
+                        rm -f "$pid_file"
+                        if [[ "$verbose" == true ]]; then
+                            console.info "Removed stale PID file: $pid_file"
+                        fi
+                    fi
+                fi
+            done
+        fi
+        
+        # Clean up supervisor scripts
+        local supervisor_scripts=$(find /tmp -name "*supervisor*" 2>/dev/null)
+        if [[ -n "$supervisor_scripts" ]]; then
+            console.info "Cleaning up supervisor scripts..."
+            rm -f $supervisor_scripts
+            if [[ "$verbose" == true ]]; then
+                console.info "Removed supervisor scripts: $supervisor_scripts"
+            fi
+        fi
+        
+        console.success "All auto-respawning services killed"
+        return 0
+    fi
+
+    if [[ -z "$service_name" ]]; then
+        console.error "service.kill_respawn: service_name is required (or use --all)"
+        return 1
+    fi
+
+    console.info "Killing auto-respawning service: $service_name"
+
+    # Try to stop via service tracking first
+    if service.is_running "$service_name" 2>/dev/null; then
+        console.info "Service is tracked, stopping normally..."
+        if service.stop "$service_name" --force; then
+            console.success "Service stopped via normal tracking"
+            return 0
+        fi
+    fi
+
+    # Find service by PID file
+    local pid_file="/var/run/${service_name}.pid"
+    local pid=""
+    
+    if [[ -f "$pid_file" ]]; then
+        pid=$(cat "$pid_file" 2>/dev/null)
+        if [[ -n "$pid" ]]; then
+            console.info "Found PID file: $pid_file (PID: $pid)"
+        fi
+    fi
+
+    # Find supervisor processes for this service
+    local supervisor_pids=$(ps aux | grep -E "(supervisor|nohup)" | grep "$service_name" | grep -v grep | awk '{print $2}')
+    
+    if [[ -n "$supervisor_pids" ]]; then
+        console.info "Found supervisor processes for $service_name: $supervisor_pids"
+        
+        # Kill supervisor processes first
+        for spid in $supervisor_pids; do
+            if [[ "$verbose" == true ]]; then
+                console.info "Killing supervisor PID: $spid"
+            fi
+            
+            if [[ "$force" == true ]]; then
+                kill -9 "$spid" 2>/dev/null
+            else
+                kill "$spid" 2>/dev/null
+            fi
+        done
+        
+        # Wait for supervisor to die
+        sleep 2
+    fi
+
+    # Kill the main service process if still running
+    if [[ -n "$pid" && process.exists "$pid" ]]; then
+        console.info "Killing main service process: $pid"
+        
+        if [[ "$force" == true ]]; then
+            process.abort "$pid" --verbose "$verbose"
+        else
+            process.stop "$pid" --timeout 10 --verbose "$verbose"
+        fi
+    fi
+
+    # Clean up PID file
+    if [[ -f "$pid_file" ]]; then
+        rm -f "$pid_file"
+        if [[ "$verbose" == true ]]; then
+            console.info "Removed PID file: $pid_file"
+        fi
+    fi
+
+    # Clean up supervisor scripts for this service
+    local supervisor_scripts=$(find /tmp -name "*${service_name}*supervisor*" 2>/dev/null)
+    if [[ -n "$supervisor_scripts" ]]; then
+        rm -f $supervisor_scripts
+        if [[ "$verbose" == true ]]; then
+            console.info "Removed supervisor scripts: $supervisor_scripts"
+        fi
+    fi
+
+    console.success "Auto-respawning service '$service_name' killed completely"
+    return 0
+}
+
 # Show service module help
 service.help() {
     cat <<'EOF'
@@ -964,6 +1145,13 @@ Functions:
       --timeout <seconds>    Graceful stop timeout (default: 10)
       --verbose              Enable verbose output
 
+  service.kill_respawn <service_name> [options]
+    Kill auto-respawning service completely (including supervisor)
+    Options:
+      --force                Force kill (kill -9)
+      --verbose              Enable verbose output
+      --all                  Kill all auto-respawning services
+
   service.list [options]
     List all tracked services
     Options:
@@ -1001,8 +1189,17 @@ Examples:
   # Stop service gracefully
   service.stop web_server --timeout 15
 
+  # Kill auto-respawning service completely
+  service.kill_respawn api_server --verbose
+
+  # Kill all auto-respawning services
+  service.kill_respawn --all --force
+
   # List all services
   service.list --verbose
+
+  # Discover services after logout
+  service.list --discover
 
   # Check requirements
   service.check_requirements

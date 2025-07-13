@@ -192,4 +192,58 @@ The template uses `printf` instead of `console` functions because:
 ### Related Commits
 - `4a0a928` - refactor: move supervisor script to templates folder and add documentation
 - `bb9f17b` - fix: pass BASH__PATH during template processing to fix background service startup
-- `871ae25` - fix: correct path to init.sh in supervisor template 
+- `871ae25` - fix: correct path to init.sh in supervisor template
+
+---
+
+## Service Tracking Lost After Logout
+
+### Issue Description
+Service tracking information is lost when users logout and return, making it impossible to manage auto-respawning services that continue running in the background.
+
+### Symptoms
+- `service.list` returns "No services are currently tracked" after logout
+- Auto-respawning services continue running but aren't tracked
+- Manual process killing required to stop services
+- No way to discover running services from previous sessions
+
+### Environment
+- **Affected:** All systems using background services with `--respawn --background`
+- **Root Cause:** Service tracking uses memory variables that are lost on logout
+- **Impact:** Cannot manage services after session restart
+
+### Root Cause
+Service tracking uses in-memory variables that don't persist across sessions:
+
+```bash
+# These variables are lost on logout
+SERVICE_PIDS=""
+SERVICE_STATUS=""
+
+# But background processes continue running with nohup
+nohup bash supervisor_script > log_file 2>&1 &
+```
+
+### Solution Implemented
+1. **Added `--discover` option to `service.list`** to find services from PID files
+2. **Enhanced service discovery** from `/var/run/*.pid` files
+3. **Created `service.kill_respawn` function** to stop auto-respawning services
+4. **Added comprehensive cleanup** for supervisor processes
+
+### Files Modified
+- `lib/modules/system/service.mod.sh` - Added discovery and kill_respawn functions
+
+### New Functions
+```bash
+# Discover services from PID files (useful after logout)
+service.list --discover
+
+# Kill auto-respawning service completely
+service.kill_respawn <service_name>
+
+# Kill all auto-respawning services
+service.kill_respawn --all
+```
+
+### Related Commits
+- `505c67e` - feat: add service discovery from PID files for post-logout scenarios 
