@@ -72,6 +72,16 @@ _service_check_nohup() {
     return 0
 }
 
+# Check if process exists (with fallback)
+_service_process_exists() {
+    local pid="$1"
+    if [[ -n "$(command -v process.exists 2>/dev/null)" ]]; then
+        process.exists "$pid"
+    else
+        kill -0 "$pid" 2>/dev/null
+    fi
+}
+
 # Process template file with variable substitution
 # Usage: _service_process_template <template_file> <output_file> <var1=value1> [var2=value2] ...
 _service_process_template() {
@@ -447,7 +457,7 @@ _service_start_with_respawn() {
                 console.success "Service '$service_name' is ready and running"
                 
                 # Monitor the process
-                while process.exists "$pid"; do
+                while _service_process_exists "$pid"; do
                     sleep 5
                 done
                 
@@ -541,7 +551,7 @@ service.wait_for_ready() {
 
     while [[ $elapsed -lt $timeout ]]; do
         # Check if process is still running
-        if ! process.exists "$pid"; then
+        if ! _service_process_exists "$pid"; then
             console.error "Service '$service_name' process (PID: $pid) is no longer running"
             return 1
         fi
@@ -854,7 +864,7 @@ service.list() {
                 local service_name=$(basename "$pid_file" .pid)
                 local pid=$(cat "$pid_file" 2>/dev/null)
                 
-                if [[ -n "$pid" && process.exists "$pid" ]]; then
+                if [[ -n "$pid" && ( -n "$(command -v process.exists 2>/dev/null)" && process.exists "$pid" || kill -0 "$pid" 2>/dev/null ) ]]; then
                     if [[ "$verbose" == true ]]; then
                         local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
                         local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
