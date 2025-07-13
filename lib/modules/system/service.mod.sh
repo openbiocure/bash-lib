@@ -864,7 +864,7 @@ service.list() {
                 local service_name=$(basename "$pid_file" .pid)
                 local pid=$(cat "$pid_file" 2>/dev/null)
                 
-                if [[ -n "$pid" && ( -n "$(command -v process.exists 2>/dev/null)" && process.exists "$pid" || kill -0 "$pid" 2>/dev/null ) ]]; then
+                if [[ -n "$pid" ]] && _service_process_exists "$pid"; then
                     if [[ "$verbose" == true ]]; then
                         local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
                         local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
