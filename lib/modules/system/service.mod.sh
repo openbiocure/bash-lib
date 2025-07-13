@@ -1073,7 +1073,7 @@ service.kill_respawn() {
     fi
 
     # Kill the main service process if still running
-    if [[ -n "$pid" && process.exists "$pid" ]]; then
+    if [[ -n "$pid" ]] && _service_process_exists "$pid"; then
         console.info "Killing main service process: $pid"
         
         if [[ "$force" == true ]]; then
