@@ -357,4 +357,59 @@ done
 - `lib/modules/system/service.mod.sh` - Fixed argument parsing logic
 
 ### Related Commits
-- `5b5d804` - fix: service.kill_respawn --all argument parsing (--all was treated as service name) 
+- `5b5d804` - fix: service.kill_respawn --all argument parsing (--all was treated as service name)
+
+---
+
+## Process Stop Verbose Flag Handling
+
+### Issue Description
+The `service.kill_respawn` function was incorrectly passing the verbose flag to `process.stop` and `process.abort` functions, causing "Multiple PIDs specified" errors.
+
+### Symptoms
+- `service.kill_respawn <service_name>` fails with "Multiple PIDs specified" error
+- Error occurs when killing main service process
+- Function appears to succeed but shows error during process termination
+- Verbose flag is passed as a value instead of a flag
+
+### Environment
+- **Affected:** All systems using `service.kill_respawn` with verbose output
+- **Root Cause:** Verbose flag passed as argument value instead of flag
+- **Impact:** Process termination fails with confusing error messages
+
+### Root Cause
+The function was passing the verbose flag incorrectly:
+
+```bash
+# ❌ Old logic - passed verbose as value
+process.stop "$pid" --timeout=10 --verbose "$verbose"
+process.abort "$pid" --verbose "$verbose"
+```
+
+This caused the process functions to interpret `"$verbose"` (which could be "true") as an additional PID argument.
+
+### Solution Implemented
+Fixed verbose flag handling to conditionally pass the flag only when verbose is true:
+
+```bash
+# ✅ Fixed logic - conditionally pass verbose flag
+if [[ "$force" == true ]]; then
+    if [[ "$verbose" == true ]]; then
+        process.abort "$pid" --verbose
+    else
+        process.abort "$pid"
+    fi
+else
+    if [[ "$verbose" == true ]]; then
+        process.stop "$pid" --timeout=10 --verbose
+    else
+        process.stop "$pid" --timeout=10
+    fi
+fi
+```
+
+### Files Modified
+- `lib/modules/system/service.mod.sh` - Fixed verbose flag handling in process calls
+
+### Related Commits
+- `0aef3e7` - fix: process.stop verbose flag handling in service.kill_respawn 
