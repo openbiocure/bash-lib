@@ -1056,8 +1056,17 @@ service.kill_respawn() {
 
     console.info "Killing auto-respawning service: $service_name"
 
+    # Check if service exists in any form
+    local service_found=false
+    local service_tracked=false
+    local pid_file_exists=false
+    local supervisor_exists=false
+    local main_process_exists=false
+
     # Try to stop via service tracking first
     if service.is_running "$service_name" 2>/dev/null; then
+        service_tracked=true
+        service_found=true
         console.info "Service is tracked, stopping normally..."
         if service.stop "$service_name" --force; then
             console.success "Service stopped via normal tracking"
@@ -1070,6 +1079,8 @@ service.kill_respawn() {
     local pid=""
     
     if [[ -f "$pid_file" ]]; then
+        pid_file_exists=true
+        service_found=true
         pid=$(cat "$pid_file" 2>/dev/null)
         if [[ -n "$pid" ]]; then
             console.info "Found PID file: $pid_file (PID: $pid)"
@@ -1080,6 +1091,8 @@ service.kill_respawn() {
     local supervisor_pids=$(ps aux | grep -E "(supervisor|nohup)" | grep "$service_name" | grep -v grep | awk '{print $2}')
     
     if [[ -n "$supervisor_pids" ]]; then
+        supervisor_exists=true
+        service_found=true
         console.info "Found supervisor processes for $service_name: $supervisor_pids"
         
         # Kill supervisor processes first
@@ -1101,6 +1114,8 @@ service.kill_respawn() {
 
     # Kill the main service process if still running
     if [[ -n "$pid" ]] && _service_process_exists "$pid"; then
+        main_process_exists=true
+        service_found=true
         console.info "Killing main service process: $pid"
         
         if [[ "$force" == true ]]; then
@@ -1135,8 +1150,14 @@ service.kill_respawn() {
         fi
     fi
 
-    console.success "Auto-respawning service '$service_name' killed completely"
-    return 0
+    # Check if we actually found and killed anything
+    if [[ "$service_found" == true ]]; then
+        console.success "Auto-respawning service '$service_name' killed completely"
+        return 0
+    else
+        console.warn "Service '$service_name' not found (no PID file, supervisor process, or tracked service)"
+        return 0
+    fi
 }
 
 # Show service module help
