@@ -806,9 +806,14 @@ service.stop() {
 
 # List all services
 # Usage: service.list [options]
+# Options:
+#   --verbose              Show detailed information
+#   --discover            Discover services from PID files
+#   --format <format>     Custom output format (e.g., "id,name" or "name,pid,status")
 service.list() {
     local verbose=false
     local discover=false
+    local format=""
 
     # Parse options
     while [[ $# -gt 0 ]]; do
@@ -821,6 +826,10 @@ service.list() {
             discover=true
             shift
             ;;
+        --format)
+            format="$2"
+            shift 2
+            ;;
         *)
             console.error "Unknown option: $1"
             return 1
@@ -828,36 +837,89 @@ service.list() {
         esac
     done
 
+    # Helper function to format service output
+    _format_service_output() {
+        local service_name="$1"
+        local pid="$2"
+        local status="$3"
+        local process_name="$4"
+        local user="$5"
+        local pid_file="$6"
+        
+        if [[ -n "$format" ]]; then
+            # Custom format output
+            local output=""
+            IFS=',' read -ra fields <<< "$format"
+            for field in "${fields[@]}"; do
+                case "$field" in
+                    "id"|"name")
+                        output="${output}${service_name}"
+                        ;;
+                    "pid")
+                        output="${output}${pid}"
+                        ;;
+                    "status")
+                        output="${output}${status}"
+                        ;;
+                    "process")
+                        output="${output}${process_name}"
+                        ;;
+                    "user")
+                        output="${output}${user}"
+                        ;;
+                    "pid_file")
+                        output="${output}${pid_file}"
+                        ;;
+                    *)
+                        output="${output}${field}"
+                        ;;
+                esac
+                output="${output},"
+            done
+            # Remove trailing comma
+            printf '%s\n' "${output%,}"
+        else
+            # Default formatted output
+            if [[ "$verbose" == true ]]; then
+                console.info "  $service_name: PID=$pid, Status=$status, Process=$process_name, User=$user"
+            else
+                console.info "  $service_name: PID=$pid, Status=$status"
+            fi
+        fi
+    }
+
     local service_list=$(_service_list)
     local found_services=false
 
     # Show tracked services
     if [[ -n "$service_list" ]]; then
-        console.info "Tracked Services:"
+        if [[ -z "$format" ]]; then
+            console.info "Tracked Services:"
+        fi
         found_services=true
         echo "$service_list" | while read -r service_name; do
             local pid=$(_service_get_pid "$service_name")
             local status=$(_service_get_status "$service_name")
 
             if process.exists "$pid"; then
-                if [[ "$verbose" == true ]]; then
-                    local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
-                    local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
-                    console.info "  $service_name: PID=$pid, Status=$status, Process=$process_name, User=$user"
-                else
-                    console.info "  $service_name: PID=$pid, Status=$status"
-                fi
+                local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                _format_service_output "$service_name" "$pid" "$status" "$process_name" "$user" ""
             else
-                console.warn "  $service_name: PID=$pid (process not found - stale entry)"
+                if [[ -z "$format" ]]; then
+                    console.warn "  $service_name: PID=$pid (process not found - stale entry)"
+                fi
             fi
         done
     fi
 
     # Discover services from PID files if requested
     if [[ "$discover" == true ]]; then
-        console.info "Discovering Services from PID Files:"
+        if [[ -z "$format" ]]; then
+            console.info "Discovering Services from PID Files:"
+        fi
         
-                # Debug: Always show what we're checking
+        # Debug: Always show what we're checking
         console.debug "Checking for PID files in /var/run/"
         console.debug "Using ls instead of find for PID file discovery"
 
@@ -875,19 +937,19 @@ service.list() {
                 local pid=$(cat "$pid_file" 2>/dev/null)
                 
                 if [[ -n "$pid" ]] && _service_process_exists "$pid"; then
-                    if [[ "$verbose" == true ]]; then
-                        local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
-                        local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
-                        console.info "  $service_name: PID=$pid, PID_File=$pid_file, Process=$process_name, User=$user"
-                    else
-                        console.info "  $service_name: PID=$pid, PID_File=$pid_file"
-                    fi
+                    local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                    local user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                    _format_service_output "$service_name" "$pid" "running" "$process_name" "$user" "$pid_file"
                 else
-                    console.warn "  $service_name: PID_File=$pid_file (process not found - stale PID file)"
+                    if [[ -z "$format" ]]; then
+                        console.warn "  $service_name: PID_File=$pid_file (process not found - stale PID file)"
+                    fi
                 fi
             done
         else
-            console.info "  No PID files found in /var/run/"
+            if [[ -z "$format" ]]; then
+                console.info "  No PID files found in /var/run/"
+            fi
             
             # Debug: Try alternative method to check for PID files
             if [[ "$verbose" == true ]]; then
@@ -901,9 +963,11 @@ service.list() {
     fi
 
     if [[ "$found_services" != true ]]; then
-        console.info "No services found"
-        if [[ "$discover" != true ]]; then
-            console.info "Use 'service.list --discover' to find services from PID files"
+        if [[ -z "$format" ]]; then
+            console.info "No services found"
+            if [[ "$discover" != true ]]; then
+                console.info "Use 'service.list --discover' to find services from PID files"
+            fi
         fi
     fi
 }
@@ -1223,6 +1287,7 @@ Functions:
     Options:
       --verbose              Show detailed information
       --discover             Discover services from PID files (useful after logout)
+      --format <format>      Custom output format (e.g., "id,name" or "name,pid,status")
 
   service.info <service_name>
     Show detailed information about a service
@@ -1266,6 +1331,10 @@ Examples:
 
   # Discover services after logout
   service.list --discover
+
+  # List services with custom format
+  service.list --format "name,pid,status"
+  service.list --format "id,pid" --discover
 
   # Check requirements
   service.check_requirements
