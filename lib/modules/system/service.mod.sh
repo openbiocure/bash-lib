@@ -946,14 +946,12 @@ service.info() {
 # Usage: service.kill_respawn <service_name> [options]
 #        service.kill_respawn --all [options]
 service.kill_respawn() {
-    local service_name="$1"
-    shift
-
+    local service_name=""
     local force=false
     local verbose=false
     local kill_all=false
 
-    # Parse options
+    # Parse all arguments as options first
     while [[ $# -gt 0 ]]; do
         case $1 in
         --force)
@@ -968,9 +966,19 @@ service.kill_respawn() {
             kill_all=true
             shift
             ;;
-        *)
+        -*)
             console.error "Unknown option: $1"
             return 1
+            ;;
+        *)
+            # First non-option argument is the service name
+            if [[ -z "$service_name" ]]; then
+                service_name="$1"
+            else
+                console.error "Multiple service names specified"
+                return 1
+            fi
+            shift
             ;;
         esac
     done
@@ -1237,3 +1245,4 @@ EOF
 
 # Module import signal using scoped naming
 export BASH_LIB_IMPORTED_service="1"
+
