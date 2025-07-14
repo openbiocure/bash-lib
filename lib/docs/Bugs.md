@@ -284,4 +284,77 @@ Modified the `directory.remove` function to automatically add the recursive flag
 - `lib/modules/directory/directory.mod.sh` - Fixed recursive flag logic
 
 ### Related Commits
-- `[commit_hash]` - fix: directory.remove auto-adds recursive flag for directories 
+- `[commit_hash]` - fix: directory.remove auto-adds recursive flag for directories
+
+---
+
+## Service Kill Respawn --all Argument Parsing
+
+### Issue Description
+The `service.kill_respawn --all` command was incorrectly parsing the `--all` flag as a service name instead of a flag, causing it to try to kill a service named "--all".
+
+### Symptoms
+- `service.kill_respawn --all` treats `--all` as a service name
+- Error: `Killing auto-respawning service: --all`
+- grep error: `unrecognized option '--all'`
+- Function fails to kill all services as intended
+
+### Environment
+- **Affected:** All systems using `service.kill_respawn --all`
+- **Root Cause:** Argument parsing logic treated first argument as service name
+- **Impact:** Cannot kill all auto-respawning services with single command
+
+### Root Cause
+The function was using incorrect argument parsing logic:
+
+```bash
+# ❌ Old logic - treated first argument as service name
+local service_name="$1"
+shift
+
+# Parse options
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    --all)
+        kill_all=true
+        shift
+        ;;
+    # ...
+    esac
+done
+```
+
+This meant `--all` was stored as `service_name` and never reached the option parsing.
+
+### Solution Implemented
+Fixed argument parsing to handle all arguments as options first, then treat the first non-option argument as the service name:
+
+```bash
+# ✅ Fixed logic - parse all arguments as options first
+local service_name=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    --all)
+        kill_all=true
+        shift
+        ;;
+    -*)
+        # Handle other options
+        ;;
+    *)
+        # First non-option argument is service name
+        if [[ -z "$service_name" ]]; then
+            service_name="$1"
+        fi
+        shift
+        ;;
+    esac
+done
+```
+
+### Files Modified
+- `lib/modules/system/service.mod.sh` - Fixed argument parsing logic
+
+### Related Commits
+- `5b5d804` - fix: service.kill_respawn --all argument parsing (--all was treated as service name) 
