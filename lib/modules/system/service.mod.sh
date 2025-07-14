@@ -1104,9 +1104,17 @@ service.kill_respawn() {
         console.info "Killing main service process: $pid"
         
         if [[ "$force" == true ]]; then
-            process.abort "$pid" --verbose "$verbose"
+            if [[ "$verbose" == true ]]; then
+                process.abort "$pid" --verbose
+            else
+                process.abort "$pid"
+            fi
         else
-            process.stop "$pid" --timeout=10 --verbose "$verbose"
+            if [[ "$verbose" == true ]]; then
+                process.stop "$pid" --timeout=10 --verbose
+            else
+                process.stop "$pid" --timeout=10
+            fi
         fi
     fi
 
