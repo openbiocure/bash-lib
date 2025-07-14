@@ -858,6 +858,11 @@ service.list() {
         console.info "Discovering Services from PID Files:"
         local pid_files=$(find /var/run -name "*.pid" 2>/dev/null)
         
+        # Debug: Show what find command returned
+        if [[ "$verbose" == true ]]; then
+            console.debug "Find command result: '$pid_files'"
+        fi
+        
         if [[ -n "$pid_files" ]]; then
             found_services=true
             for pid_file in $pid_files; do
@@ -878,6 +883,15 @@ service.list() {
             done
         else
             console.info "  No PID files found in /var/run/"
+            
+            # Debug: Try alternative method to check for PID files
+            if [[ "$verbose" == true ]]; then
+                local alt_check=$(ls /var/run/*.pid 2>/dev/null | wc -l)
+                console.debug "Alternative check: found $alt_check PID files with ls"
+                if [[ $alt_check -gt 0 ]]; then
+                    console.debug "PID files found with ls: $(ls /var/run/*.pid 2>/dev/null)"
+                fi
+            fi
         fi
     fi
 
