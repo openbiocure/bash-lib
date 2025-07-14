@@ -857,20 +857,20 @@ service.list() {
     if [[ "$discover" == true ]]; then
         console.info "Discovering Services from PID Files:"
         
-        # Debug: Always show what we're checking
-        console.debug "Checking for PID files in /var/run/"
-        console.debug "Running: find /var/run -name \"*.pid\""
-        
+                # Debug: Always show what we're checking
+        console.info "DEBUG: Checking for PID files in /var/run/"
+        console.info "DEBUG: Running: find /var/run -name \"*.pid\""
+
         local pid_files=$(find /var/run -name "*.pid" 2>/dev/null)
-        
+
         # Debug: Show what find command returned
-        console.debug "Find command result: '$pid_files'"
-        console.debug "Find command exit code: $?"
+        console.info "DEBUG: Find command result: '$pid_files'"
+        console.info "DEBUG: Find command exit code: $?"
         
         # Also try ls as a comparison
         local ls_result=$(ls /var/run/*.pid 2>/dev/null)
-        console.debug "LS command result: '$ls_result'"
-        console.debug "LS command exit code: $?"
+        console.info "DEBUG: LS command result: '$ls_result'"
+        console.info "DEBUG: LS command exit code: $?"
         
         if [[ -n "$pid_files" ]]; then
             found_services=true
