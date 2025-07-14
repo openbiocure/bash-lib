@@ -858,19 +858,15 @@ service.list() {
         console.info "Discovering Services from PID Files:"
         
                 # Debug: Always show what we're checking
-        console.info "DEBUG: Checking for PID files in /var/run/"
-        console.info "DEBUG: Running: find /var/run -name \"*.pid\""
+        console.debug "Checking for PID files in /var/run/"
+        console.debug "Using ls instead of find for PID file discovery"
 
-        local pid_files=$(find /var/run -name "*.pid" 2>/dev/null)
+        # Use ls instead of find since find is not working properly
+        local pid_files=$(ls /var/run/*.pid 2>/dev/null)
 
-        # Debug: Show what find command returned
-        console.info "DEBUG: Find command result: '$pid_files'"
-        console.info "DEBUG: Find command exit code: $?"
-        
-        # Also try ls as a comparison
-        local ls_result=$(ls /var/run/*.pid 2>/dev/null)
-        console.info "DEBUG: LS command result: '$ls_result'"
-        console.info "DEBUG: LS command exit code: $?"
+        # Debug: Show what ls command returned
+        console.debug "LS command result: '$pid_files'"
+        console.debug "LS command exit code: $?"
         
         if [[ -n "$pid_files" ]]; then
             found_services=true
