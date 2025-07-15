@@ -409,6 +409,30 @@ _service_start_with_respawn() {
                 console.info "Logs: $log_file"
                 console.info "PID file: $pid_file"
                 console.info "Supervisor script: $supervisor_script"
+                
+                # Wait for PID file to be created and read the actual service PID
+                local attempts=0
+                local max_attempts=10
+                local service_pid=""
+                
+                while [[ $attempts -lt $max_attempts ]]; do
+                    if [[ -f "$pid_file" ]]; then
+                        service_pid=$(cat "$pid_file" 2>/dev/null)
+                        if [[ -n "$service_pid" ]] && _service_process_exists "$service_pid"; then
+                            # Track the service in current session
+                            _service_set_pid "$service_name" "$service_pid"
+                            _service_set_status "$service_name" "running"
+                            console.info "Service '$service_name' tracked in current session (PID: $service_pid)"
+                            break
+                        fi
+                    fi
+                    sleep 1
+                    ((attempts++))
+                done
+                
+                if [[ -z "$service_pid" ]]; then
+                    console.warn "Could not read service PID from file, but supervisor is running"
+                fi
             else
                 console.error "Failed to start supervisor for service '$service_name'"
                 console.error "Check logs: $log_file"
