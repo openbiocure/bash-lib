@@ -92,7 +92,7 @@ function forEach.array() {
         return 1
     fi
 
-    if [[ ${#items[@]:-0} -eq 0 ]]; then
+    if [[ ${#items[@]} -eq 0 ]]; then
         console.error "No items to iterate over"
         return 1
     fi
@@ -104,7 +104,7 @@ function forEach.array() {
     fi
 
     if [[ "$dry_run" == "true" ]]; then
-        console.info "DRY RUN: Would iterate over ${#items[@]:-0} items"
+        console.info "DRY RUN: Would iterate over ${#items[@]} items"
         console.info "DRY RUN: Variable name: $var_name"
         console.info "DRY RUN: Callback: $callback"
         if [[ "$parallel" -gt 1 ]]; then
@@ -120,7 +120,7 @@ function forEach.array() {
     fi
 
     if [[ "$verbose" == "true" ]]; then
-        console.debug "Starting forEach.array with ${#items[@]:-0} items"
+        console.debug "Starting forEach.array with ${#items[@]} items"
         console.debug "Variable: $var_name, Callback: $callback"
         if [[ "$parallel" -gt 1 ]]; then
             console.debug "Parallel execution: $parallel"
@@ -169,8 +169,8 @@ function forEach.array() {
 
     # Sequential execution
     if [[ "$parallel" -eq 1 ]]; then
-        for i in "${!items[@]:-}"; do
-            if ! process_item "${items[$i]:-}" "$i"; then
+        for i in "${!items[@]}"; do
+            if ! process_item "${items[$i]}" "$i"; then
                 break
             fi
         done
@@ -180,12 +180,12 @@ function forEach.array() {
         local max_jobs=$parallel
         local current_jobs=0
 
-        for i in "${!items[@]:-}"; do
+        for i in "${!items[@]}"; do
             # Wait if we've reached the maximum number of parallel jobs
             while [[ $current_jobs -ge $max_jobs ]]; do
-                for j in "${!pids[@]:-}"; do
-                    if ! kill -0 "${pids[$j]:-}" 2>/dev/null; then
-                        wait "${pids[$j]:-}"
+                for j in "${!pids[@]}"; do
+                    if ! kill -0 "${pids[$j]}" 2>/dev/null; then
+                        wait "${pids[$j]}"
                         unset "pids[$j]"
                         ((current_jobs--))
                     fi
@@ -194,13 +194,13 @@ function forEach.array() {
             done
 
             # Start new job
-            process_item "${items[$i]:-}" "$i" &
+            process_item "${items[$i]}" "$i" &
             pids+=($!)
             ((current_jobs++))
         done
 
         # Wait for all remaining jobs
-        for pid in "${pids[@]:-}"; do
+        for pid in "${pids[@]}"; do
             wait "$pid"
         done
     fi
@@ -370,7 +370,7 @@ function forEach.file() {
         lines+=("$line")
     done <"$file_path"
 
-    if [[ ${#lines[@]:-0} -eq 0 ]]; then
+    if [[ ${#lines[@]} -eq 0 ]]; then
         if [[ "$verbose" == "true" ]]; then
             console.warn "No lines to process in file: $file_path"
         fi
@@ -378,7 +378,7 @@ function forEach.file() {
     fi
 
     # Use forEach.array to process the lines
-    forEach.array "$var_name" "$callback" "${lines[@]:-}" \
+    forEach.array "$var_name" "$callback" "${lines[@]}" \
         --parallel="$parallel" \
         ${break_on_error:+--break-on-error} \
         ${continue_on_error:+--continue-on-error} \
@@ -533,7 +533,7 @@ function forEach.command() {
     fi
 
     # Use forEach.array to process the lines
-    forEach.array "$var_name" "$callback" "${lines[@]:-}" \
+    forEach.array "$var_name" "$callback" "${lines[@]}" \
         --parallel="$parallel" \
         ${break_on_error:+--break-on-error} \
         ${continue_on_error:+--continue-on-error} \
