@@ -76,7 +76,23 @@ import.meta.info() {
 }
 
 #---------------------------------------
-# Module Import: Standard + Force
+# Bash Version Detection
+#---------------------------------------
+_get_bash_version() {
+  local version_string="${BASH_VERSION:-}"
+  if [[ -n "$version_string" ]]; then
+    printf '%s\n' "$version_string" | cut -d. -f1,2
+  else
+    printf 'unknown\n'
+  fi
+}
+
+_is_bash_5_1_8() {
+  [[ "$(_get_bash_version)" == "5.1" ]] && return 0 || return 1
+}
+
+#---------------------------------------
+# Module Import: Version-Specific
 #---------------------------------------
 import() {
   [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() called with args: %s\n" "$*"
@@ -86,11 +102,22 @@ import() {
     return 1
   }
 
+  # Use version-specific import method
+  if _is_bash_5_1_8; then
+    _import_bash_5_1_8 "$name" "$ext"
+  else
+    _import_standard "$name" "$ext"
+  fi
+}
+
+# Standard import method (works in most bash versions)
+_import_standard() {
+  local name="$1" ext="${2:-mod.sh}"
   local src="${BASH__PATH:-/opt/bash-lib}"
   local signal="BASH_LIB_IMPORTED_${name//\//_}"
-  [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() checking signal: %s\n" "$signal"
+
   [[ -n "${!signal:-}" ]] && {
-    [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() module %s already imported, returning\n" "$name"
+    [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_standard() module %s already imported, returning\n" "$name"
     return 0
   }
 
@@ -111,18 +138,61 @@ import() {
     ;;
   esac
 
-  [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() mod_path: %s\n" "$mod_path"
+  [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_standard() mod_path: %s\n" "$mod_path"
   if [[ -f "$mod_path" ]]; then
-    [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() sourcing %s\n" "$mod_path"
-    __debug "Importing $name from $mod_path"
+    [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_standard() sourcing %s\n" "$mod_path"
+    __debug "Importing $name from $mod_path (standard method)"
     source "$mod_path"
-    [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() sourced %s\n" "$mod_path"
+    [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_standard() sourced %s\n" "$mod_path"
     [[ -n "${!signal:-}" || "$(type -t "${name}.help")" == "function" ]] && {
-      [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: import() module %s loaded successfully\n" "$name"
+      [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_standard() module %s loaded successfully\n" "$name"
       return 0
     }
     printf "\e[33mWarning:\e[0m '%s' loaded but import signal not set\n" "$name" >&2
     return 0
+  else
+    printf "\e[31mError:\e[0m Could not find module: %s [%s]\n" "$name" "$mod_path" >&2
+    return 2
+  fi
+}
+
+# Bash 5.1.8 compatible import method (direct source, no signal checking)
+_import_bash_5_1_8() {
+  local name="$1" ext="${2:-mod.sh}"
+  local src="${BASH__PATH:-/opt/bash-lib}"
+
+  local mod_path=""
+  case "$name" in
+  console | service | process)
+    mod_path="${src}/lib/modules/system/${name}.mod.sh"
+    ;;
+  engine)
+    mod_path="${src}/lib/modules/core/engine.mod.sh"
+    ;;
+  colors)
+    mod_path="${src}/lib/config/colors.inc"
+    ext="inc"
+    ;;
+  *)
+    mod_path="$(find "${src}" -name "${name}.${ext}" 2>/dev/null | head -n1)"
+    ;;
+  esac
+
+  [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_bash_5_1_8() mod_path: %s\n" "$mod_path"
+  if [[ -f "$mod_path" ]]; then
+    [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_bash_5_1_8() sourcing %s\n" "$mod_path"
+    __debug "Importing $name from $mod_path (bash 5.1.8 method)"
+    source "$mod_path"
+    [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_bash_5_1_8() sourced %s\n" "$mod_path"
+    
+    # Verify import worked by checking if functions exist
+    if [[ "$(type -t "${name}.help")" == "function" ]]; then
+      [[ "${BASH__VERBOSE:-}" == "debug" || "${BASH__VERBOSE:-}" == "trace" ]] && printf "DEBUG: _import_bash_5_1_8() module %s loaded successfully\n" "$name"
+      return 0
+    else
+      printf "\e[31mError:\e[0m Module '%s' failed to load properly\n" "$name" >&2
+      return 1
+    fi
   else
     printf "\e[31mError:\e[0m Could not find module: %s [%s]\n" "$name" "$mod_path" >&2
     return 2
