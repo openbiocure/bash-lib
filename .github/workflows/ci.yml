@@ -41,6 +41,13 @@ jobs:
       run: |
         bash scripts/install.sh help
 
+  - name: Run example scripts
+    run: |
+      find lib/docs/examples -name "*.sh" | while read -r script; do
+        echo "Running $script"
+        bash -euo pipefail "$script"
+      done
+
   build:
     needs: test
     runs-on: ubuntu-latest
