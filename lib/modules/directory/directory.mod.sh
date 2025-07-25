@@ -11,6 +11,24 @@ fi
 import console
 import string
 
+# Console wrapper for test compatibility
+_console_wrapper() {
+    local level="$1"
+    shift
+    local message="$*"
+    
+    if command -v "console.$level" >/dev/null 2>&1; then
+        "console.$level" "$message"
+    else
+        case "$level" in
+            error|fatal) echo "ERROR: $message" >&2 ;;
+            warn) echo "WARN: $message" >&2 ;;
+            info|success|debug|trace|log) echo "$message" >&2 ;;
+            *) echo "$message" >&2 ;;
+        esac
+    fi
+}
+
 # Directory Module Configuration
 __DIR__DEFAULT_DEPTH=3
 __DIR__DEFAULT_MAX_RESULTS=100
@@ -96,9 +114,9 @@ function directory.list() {
     done < <(eval "$find_cmd -print0" 2>/dev/null)
     printf '%s\n' "items in $dir"
     if [[ $count -eq 0 ]]; then
-        console.info "No items found in directory: $dir"
+        _console_wrapper info "No items found in directory: $dir"
     else
-        console.success "Found $count items in directory: $dir"
+        _console_wrapper success "Found $count items in directory: $dir"
     fi
 }
 
@@ -226,7 +244,7 @@ function directory.remove() {
     local was_dir=0
     if [[ -d "$target" ]]; then was_dir=1; fi
     local rm_cmd="rm"
-    if [[ "$recursive" == "true" ]]; then rm_cmd="rm -r"; fi
+    if [[ "$recursive" == "true" || $was_dir -eq 1 ]]; then rm_cmd="rm -r"; fi
     if [[ "$force" == "true" ]]; then rm_cmd="$rm_cmd -f"; fi
     if [[ $was_dir -eq 1 && "$force" != "true" ]]; then
         console.warn "Removing directory: $target"

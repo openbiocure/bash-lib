@@ -165,15 +165,19 @@ function process.find() {
 
         for pid in $pids; do
             if process.exists "$pid"; then
-                if process.stop "$pid" --verbose "$verbose"; then
-                    ((killed_count++))
-                    if [[ "$verbose" == true ]]; then
+                if [[ "$verbose" == true ]]; then
+                    if process.stop "$pid" --verbose; then
+                        ((killed_count++))
                         console.success "Killed process $pid"
+                    else
+                        ((failed_count++))
+                        console.error "Failed to kill process $pid"
                     fi
                 else
-                    ((failed_count++))
-                    if [[ "$verbose" == true ]]; then
-                        console.error "Failed to kill process $pid"
+                    if process.stop "$pid"; then
+                        ((killed_count++))
+                    else
+                        ((failed_count++))
                     fi
                 fi
             else
@@ -709,6 +713,178 @@ function process.getUser() {
 }
 
 ##
+## (Usage) Find processes listening on a specific port
+##
+## Options:
+##   --verbose               - Show detailed information
+##   --id                   - Print only process IDs
+##   --kill                 - Kill all processes listening on the port
+##
+## Examples:
+##   process.listening_to 8080              # Find processes on port 8080
+##   process.listening_to 3000 --verbose    # Show detailed info
+##   process.listening_to 80 --id           # Print only PIDs
+##   process.listening_to 443 --kill        # Kill all processes on port 443
+##
+function process.listening_to() {
+    local port=""
+    local verbose=false
+    local show_ids=false
+    local kill_processes=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        --verbose)
+            verbose=true
+            shift
+            ;;
+        --id)
+            show_ids=true
+            shift
+            ;;
+        --kill)
+            kill_processes=true
+            shift
+            ;;
+        -*)
+            console.error "Unknown option: $1"
+            return 1
+            ;;
+        *)
+            if [[ -z "$port" ]]; then
+                port="$1"
+            else
+                console.error "Multiple ports specified"
+                return 1
+            fi
+            shift
+            ;;
+        esac
+    done
+
+    # Validate port
+    if [[ -z "$port" ]]; then
+        console.error "Port number is required"
+        return 1
+    fi
+
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [[ "$port" -lt 1 ]] || [[ "$port" -gt 65535 ]]; then
+        console.error "Port must be a number between 1 and 65535"
+        return 1
+    fi
+
+    # Find processes listening on the port
+    local listening_processes=""
+    
+    # Try different methods to find listening processes
+    if command -v ss >/dev/null 2>&1; then
+        # Use ss (socket statistics) - modern replacement for netstat
+        listening_processes=$(ss -tlnp 2>/dev/null | grep ":$port " | awk '{print $7}' | sed 's/.*pid=\([0-9]*\).*/\1/' | sort -u)
+    elif command -v netstat >/dev/null 2>&1; then
+        # Fallback to netstat
+        listening_processes=$(netstat -tlnp 2>/dev/null | grep ":$port " | awk '{print $7}' | sed 's/.*\/\([0-9]*\).*/\1/' | sort -u)
+    elif command -v lsof >/dev/null 2>&1; then
+        # Fallback to lsof
+        listening_processes=$(lsof -i :$port -t 2>/dev/null | sort -u)
+    else
+        console.error "No suitable tool found (ss, netstat, or lsof required)"
+        return 1
+    fi
+
+    if [[ -z "$listening_processes" ]]; then
+        if [[ "$verbose" == true ]]; then
+            console.info "No processes found listening on port $port"
+        fi
+        return 0
+    fi
+
+    # Handle different output modes
+    if [[ "$show_ids" == true ]]; then
+        # Print only PIDs
+        echo "$listening_processes"
+    elif [[ "$kill_processes" == true ]]; then
+        # Kill processes and show results
+        local killed_count=0
+        local failed_count=0
+
+        for pid in $listening_processes; do
+            if process.exists "$pid"; then
+                if [[ "$verbose" == true ]]; then
+                    local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                    local process_user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                    console.info "Killing process $pid ($process_name, user: $process_user)"
+                fi
+                
+                if process.stop "$pid" --timeout=5; then
+                    ((killed_count++))
+                    if [[ "$verbose" == true ]]; then
+                        console.success "Killed process $pid"
+                    fi
+                else
+                    ((failed_count++))
+                    if [[ "$verbose" == true ]]; then
+                        console.error "Failed to kill process $pid"
+                    fi
+                fi
+            else
+                if [[ "$verbose" == true ]]; then
+                    console.warn "Process $pid no longer exists"
+                fi
+            fi
+        done
+
+        if [[ $killed_count -gt 0 ]]; then
+            console.success "Successfully killed $killed_count process(es) listening on port $port"
+        fi
+
+        if [[ $failed_count -gt 0 ]]; then
+            console.error "Failed to kill $failed_count process(es)"
+            return 1
+        fi
+
+        return 0
+    else
+        # Default: show detailed process information
+        local found_processes=false
+        
+        for pid in $listening_processes; do
+            if process.exists "$pid"; then
+                found_processes=true
+                local process_name=$(process.getName "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                local process_user=$(process.getUser "$pid" 2>/dev/null || printf '%s\n' "unknown")
+                
+                if [[ "$verbose" == true ]]; then
+                    # Get additional process info
+                    local cmdline=$(ps -p "$pid" -o args= 2>/dev/null | head -1)
+                    local memory=$(ps -p "$pid" -o rss= 2>/dev/null | head -1)
+                    local cpu=$(ps -p "$pid" -o %cpu= 2>/dev/null | head -1)
+                    
+                    console.info "Process listening on port $port:"
+                    console.info "  PID: $pid"
+                    console.info "  Name: $process_name"
+                    console.info "  User: $process_user"
+                    console.info "  Command: $cmdline"
+                    console.info "  Memory: ${memory}KB"
+                    console.info "  CPU: ${cpu}%"
+                    console.info "  ---"
+                else
+                    console.info "PID: $pid, Name: $process_name, User: $process_user"
+                fi
+            else
+                if [[ "$verbose" == true ]]; then
+                    console.warn "Process $pid no longer exists"
+                fi
+            fi
+        done
+        
+        if [[ "$found_processes" != true ]]; then
+            console.info "No active processes found listening on port $port"
+        fi
+    fi
+}
+
+##
 ## (Usage) Show process module help
 ##
 function process.help() {
@@ -719,6 +895,7 @@ Available Functions:
   process.list [options]           - List running processes
   process.count                    - Get total process count
   process.find <name> [options]    - Find processes by name
+  process.listening_to <port> [options] - Find processes listening on a port
   process.top_cpu [limit]          - Top processes by CPU usage
   process.top_mem [limit]          - Top processes by memory usage
   process.run <command> [options]  - Run a command with various options
@@ -734,6 +911,11 @@ List Options:
 Find Options:
   --id                             - Print only process IDs
   --kill                           - Kill all matching processes
+  --verbose                        - Show detailed information
+
+Listening Options:
+  --id                             - Print only process IDs
+  --kill                           - Kill all processes listening on the port
   --verbose                        - Show detailed information
 
 Run Options:
@@ -761,6 +943,10 @@ Examples:
   process.find npm --id            # Print only npm process IDs
   process.find node --kill         # Kill all node processes
   process.find python --verbose    # Find Python processes with details
+  process.listening_to 8080        # Find processes on port 8080
+  process.listening_to 3000 --verbose # Show detailed info
+  process.listening_to 80 --id     # Print only PIDs
+  process.listening_to 443 --kill  # Kill all processes on port 443
   process.top_cpu 5                # Top 5 CPU-intensive processes
   process.top_mem 10               # Top 10 memory-intensive processes
   process.run "apt-get update" --timeout=300

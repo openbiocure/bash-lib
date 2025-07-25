@@ -5,6 +5,10 @@ setup() {
     # Set BASH__PATH to the project root
     export BASH__PATH="$(pwd)"
     source "${BASH__PATH:-}/spec/init-spec.sh"
+    
+    # Source console module directly for bash 5.1.8 compatibility
+    source "${BASH__PATH:-}/lib/modules/system/console.mod.sh"
+    
     import directory
     import string
 }
